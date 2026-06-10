@@ -1,0 +1,6 @@
+{
+  "name": "Macata Chavalli - Art Portfolio",
+  "description": "Sitio web oficial de la artista visual Macata Chavalli. Galería de arte contemporáneo, biografía, enlaces a redes sociales y formulario de contacto.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
