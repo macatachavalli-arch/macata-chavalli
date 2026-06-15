@@ -321,7 +321,7 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                 required
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Hola Macata, me gustaría obtener información sobre..."
+                placeholder="Escribe tu mensaje..."
                 className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-[#A1A19F] resize-none"
               />
             </div>

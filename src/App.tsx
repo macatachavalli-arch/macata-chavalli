@@ -65,6 +65,25 @@ export default function App() {
   // Get the featured artwork image (Vibrant Canvas) for the hero mockup
   const heroArtwork = artworksList[0] || defaultArtworks[0];
 
+  if (isAdminOpen) {
+    return (
+      <AdminPanel
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        artworks={artworksList}
+        setArtworks={setArtworksList}
+        designProjects={designProjectsList}
+        setDesignProjects={setDesignProjectsList}
+        onResetToDefaults={() => {
+          localStorage.removeItem('macata_artworks');
+          localStorage.removeItem('macata_designs');
+          setArtworksList(defaultArtworks);
+          setDesignProjectsList(defaultDesignProjects);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="bg-[#F7F7F5] min-h-screen relative overflow-x-hidden pt-0 selections:bg-[#1A1A1A]/10 selections:text-[#1A1A1A]">
       
@@ -106,40 +125,7 @@ export default function App() {
       {/* Floating Header sits overlaying the banner image */}
       <Header />
 
-      {/* Elegant Centered Introduction Area */}
-      <section className="relative px-6 py-16 sm:py-24 max-w-5xl mx-auto text-center border-b border-[#E5E5E1]">
 
-        <h2 className="font-caslon text-3xl sm:text-5xl font-light tracking-tight leading-[1.2] mb-6 text-[#1A1A1A] max-w-3xl mx-auto" style={{ fontFamily: "'Caslon Antique', serif" }}>
-          El Arte como Puente entre Mundos
-        </h2>
-
-        <p className="text-sm sm:text-base text-[#71716F] font-light leading-relaxed max-w-2xl mx-auto mb-10 whitespace-pre-line italic" style={{ fontFamily: 'Georgia, serif' }}>
-          {"Un encuentro entre misterios.\nUnión entre la Tierra y el Cosmos.\n\nEl arte escucha el lenguaje secreto\nde los bosques, los ríos, el cielo.\n\nCrear para revelar lo invisible.\nUna danza de luz con la oscuridad.\n\nTransmutación y conexión."}
-        </p>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
-          <a
-            href="#galeria"
-            className="bg-[#1A1A1A] text-white hover:bg-opacity-90 px-8 py-4 rounded-none text-[10px] tracking-[0.2em] font-sans uppercase font-bold text-center transition-all flex items-center justify-center"
-          >
-            Explorarla Colección
-          </a>
-          <a
-            href="#contacto"
-            onClick={() => {
-              setActiveInquiry({
-                artworkTitle: 'Personalizada (Encargo)',
-                size: 'Medida a convenir',
-                frame: 'A convenir'
-              });
-            }}
-            className="bg-transparent text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white border border-[#1A1A1A] px-8 py-4 rounded-none text-[10px] tracking-[0.2em] font-sans uppercase font-bold text-center transition-all flex items-center justify-center"
-          >
-            Encargar una Obra
-          </a>
-        </div>
-      </section>
 
       {/* Gallery Section */}
       <Gallery onInquire={handleInquire} artworksList={artworksList} />
@@ -189,22 +175,6 @@ export default function App() {
 
       {/* Universal Footer */}
       <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
-
-      {/* Admin Administration Panel Modal Overlay */}
-      <AdminPanel
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        artworks={artworksList}
-        setArtworks={setArtworksList}
-        designProjects={designProjectsList}
-        setDesignProjects={setDesignProjectsList}
-        onResetToDefaults={() => {
-          localStorage.removeItem('macata_artworks');
-          localStorage.removeItem('macata_designs');
-          setArtworksList(defaultArtworks);
-          setDesignProjectsList(defaultDesignProjects);
-        }}
-      />
 
     </div>
   );

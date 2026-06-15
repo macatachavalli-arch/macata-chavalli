@@ -11,6 +11,7 @@ export interface Artwork {
   medium: string;
   size: string;
   imageUrl: string;
+  imageUrls?: string[];
   description: string;
   featured: boolean;
 }

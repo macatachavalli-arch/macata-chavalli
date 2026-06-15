@@ -30,7 +30,7 @@ export default function Footer({ onOpenAdmin }: FooterProps) {
                   id="btn-footer-admin-access"
                   className="text-[#71716F] hover:text-white transition-colors flex items-center gap-1 uppercase font-mono text-[9px] tracking-wider focus:outline-none"
                 >
-                  <Lock size={10} /> Acceso Privado
+                  <Lock size={10} /> ADMIN
                 </button>
               </>
             )}

@@ -37,6 +37,11 @@ export const artworks: Artwork[] = [
     medium: 'Acrílico sobre lienzo con relieve y detalles en pan de oro',
     size: '100 x 100 cm',
     imageUrl: '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
+    imageUrls: [
+      '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
+      'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80'
+    ],
     description: 'Una pieza vibrante capitaneada por pétalos abstractos amarillos, corales exuberantes y trazos de espátula texturizados que transmiten optimismo. Los destellos de pan de oro capturan la luz cambiante del día.',
     featured: true
   },
@@ -48,6 +53,10 @@ export const artworks: Artwork[] = [
     medium: 'Gouache, collage y técnica mixta sobre papel de algodón de 300g',
     size: '70 x 100 cm',
     imageUrl: '/src/assets/images/artwork_botanical_dream_1781006353460.png',
+    imageUrls: [
+      '/src/assets/images/artwork_botanical_dream_1781006353460.png',
+      'https://images.unsplash.com/photo-1533158326339-7f3cf2404354?auto=format&fit=crop&w=800&q=80'
+    ],
     description: 'Una atmósfera mágica y contemplativa, representando el reposo rodeado de gigantescas hojas de palmera índigo e hiedras selváticas de fantasía bajo una suave lluvia de estrellas doradas.',
     featured: true
   },
@@ -59,6 +68,10 @@ export const artworks: Artwork[] = [
     medium: 'Óleo con empaste grueso sobre madera entelada',
     size: '120 x 80 cm',
     imageUrl: '/src/assets/images/artwork_starry_landscape_1781006365363.png',
+    imageUrls: [
+      '/src/assets/images/artwork_starry_landscape_1781006365363.png',
+      'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=800&q=80'
+    ],
     description: 'Inspirada en el cielo nocturno del campo patagónico, esta pintura de empaste generoso plasma luciérnagas titilantes y un cielo arremolinado en tonos lila, cobalto y plata.',
     featured: true
   },
@@ -70,6 +83,9 @@ export const artworks: Artwork[] = [
     medium: 'Tinta de alcohol y acuarela fluida sobre papel Yupo',
     size: '80 x 60 cm',
     imageUrl: '/src/assets/images/artwork_oceanic_harmony_1781006380677.png',
+    imageUrls: [
+      '/src/assets/images/artwork_oceanic_harmony_1781006380677.png'
+    ],
     description: 'Una meditación acuática. Flujos orgánicos que sugieren arrecifes profundos y el constante vaivén de las olas. Predominan los tonos melocotón, turquesa suave y destellos minerales.',
     featured: false
   },
@@ -81,6 +97,9 @@ export const artworks: Artwork[] = [
     medium: 'Impresión artesanal sobre papel texturado de 240g con pie de madera rústica',
     size: '15 x 21 cm',
     imageUrl: '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
+    imageUrls: [
+      '/src/assets/images/artwork_vibrant_canvas_1781006340944.png'
+    ],
     description: 'Edición boutique con 12 ilustraciones mensuales desmontables para ser enmarcadas como láminas individuales de autor una vez concluido el mes.',
     featured: false
   }
