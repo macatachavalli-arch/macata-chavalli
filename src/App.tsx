@@ -18,7 +18,20 @@ import AdminPanel from './components/AdminPanel';
 export default function App() {
   const [artworksList, setArtworksList] = useState<Artwork[]>(() => {
     const cached = localStorage.getItem('macata_artworks');
-    return cached ? JSON.parse(cached) : defaultArtworks;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Artwork[];
+        return parsed.map((art) => {
+          if (art.description === 'Obra contemporánea texturada con una fina composición libre.') {
+            return { ...art, description: '' };
+          }
+          return art;
+        });
+      } catch (e) {
+        return defaultArtworks;
+      }
+    }
+    return defaultArtworks;
   });
 
   const [designProjectsList, setDesignProjectsList] = useState<DesignProject[]>(() => {

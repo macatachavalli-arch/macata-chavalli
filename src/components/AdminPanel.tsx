@@ -4,9 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw } from 'lucide-react';
+import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw, Copy, Check } from 'lucide-react';
 import { Artwork, DesignProject } from '../types';
-import { collections } from '../data';
+import { collections, artistProfile } from '../data';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -36,7 +36,8 @@ export default function AdminPanel({
   const [errorMsg, setErrorMsg] = useState('');
 
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<'obras' | 'diseños'>('obras');
+  const [activeTab, setActiveTab] = useState<'obras' | 'diseños' | 'sincronizar'>('obras');
+  const [isCopied, setIsCopied] = useState(false);
 
   // New & Edit Artwork Form State
   const [editingArtwork, setEditingArtwork] = useState<Artwork | null>(null);
@@ -149,7 +150,7 @@ export default function AdminPanel({
       size: artSize,
       imageUrl: defaultImg,
       imageUrls: finalImageUrls,
-      description: artDesc || 'Obra contemporánea texturada con una fina composición libre.',
+      description: artDesc.trim(),
       featured: artFeatured
     };
 
@@ -378,7 +379,7 @@ export default function AdminPanel({
             )}
 
             {/* Tabs selector */}
-            <div className="flex gap-6 border-b border-[#E5E5E1]">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-[#E5E5E1]">
               <button
                 onClick={() => {
                   setActiveTab('obras');
@@ -404,6 +405,20 @@ export default function AdminPanel({
                 }`}
               >
                 Diseño & Branding ({designProjects.length})
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('sincronizar');
+                  setErrorMsg('');
+                  setIsCopied(false);
+                }}
+                className={`pb-3 text-xs tracking-[0.2em] uppercase font-bold transition-all flex items-center gap-1.5 ${
+                  activeTab === 'sincronizar'
+                    ? 'text-[#1A1A1A] border-b-2 border-[#1A1A1A]'
+                    : 'text-[#71716F] hover:text-[#1A1A1A]'
+                }`}
+              >
+                ☁ Sincronizar en Vercel
               </button>
             </div>
 
@@ -855,6 +870,119 @@ export default function AdminPanel({
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: SINCRONIZAR CON VERCEL / GITHUB */}
+            {activeTab === 'sincronizar' && (
+              <div className="bg-white p-6 border border-[#E5E5E1] space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold tracking-wider uppercase text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
+                    Sincronización sin Base de Datos Externa
+                  </h4>
+                  <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#71716F] mt-1">
+                    ☁ ¿POR QUÉ EN VERCEL SIGUES VIENDO LAS OBRAS DE EJEMPLO?
+                  </p>
+                </div>
+
+                <div className="space-y-4 text-xs leading-relaxed text-stone-700">
+                  <div className="bg-stone-50 p-4 border border-stone-200 space-y-3">
+                    <p>
+                      Al subir o editar tus obras en este panel, los cambios se guardan <strong>de forma segura en la memoria de tu navegador (localStorage)</strong>. Por eso tú los ves perfectamente en tu pantalla actual.
+                    </p>
+                    <p>
+                      Sin embargo, <strong>Vercel compila tu sitio web a partir del código de tu repositorio (en GitHub)</strong>, leyendo directamente los datos predeterminados en el archivo <code>src/data.ts</code>. Para que tus nuevas obras se muestren a todo el público en Vercel, ese archivo de código debe actualizarse.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h5 className="font-mono uppercase tracking-wider text-[9px] text-[#1a1a1a] font-bold">
+                      ✦ PASO A PASO PARA ACTUALIZAR VERCEL (100% GRATIS Y SIN COMPLICACIONES)
+                    </h5>
+                    <ol className="list-decimal pl-5 space-y-1.5 text-stone-600">
+                      <li>Haz todas las cargas de obras y ediciones necesarias en este panel de control hasta estar conforme.</li>
+                      <li>Haz clic en el botón <strong>"Copiar código de data.ts"</strong> que ves aquí abajo.</li>
+                      <li>Abre el archivo <code>src/data.ts</code> en tu editor de código o directamente en tu cuenta de GitHub.</li>
+                      <li>Selecciona todo el contenido de ese archivo, bórralo y **pega** el código que acabas de copiar.</li>
+                      <li>Guarda los cambios y súbelos. <strong>¡Vercel detectará el cambio y publicará tu web con tus obras actualizadas en 1 minuto!</strong></li>
+                    </ol>
+
+                    <div className="bg-amber-50 border border-amber-200 text-amber-950 p-3 mt-4 font-mono text-[10px] uppercase">
+                      💡 <strong>¿DATO ÚTIL?</strong> Como estás chateando conmigo (tu asistente), puedes simplemente decirme: <br />
+                      <span className="italic block mt-1.5 font-bold text-stone-900 bg-white p-1.5 px-3 border border-amber-100 font-sans normal-case">
+                        "Asistente, actualiza mi archivo src/data.ts con las obras que acabo de crear"
+                      </span>
+                      y yo me encargaré de escribirlo automáticamente en los archivos de tu app de forma inmediata.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Code Area with Copy button */}
+                <div className="space-y-2 pt-2">
+                  <div className="flex justify-between items-center bg-[#1A1A1A] p-2 text-white">
+                    <span className="font-mono text-[9px] uppercase tracking-wider pl-2 text-stone-400">
+                      CÓDIGO GENERADO PARA src/data.ts
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const generateCode = () => {
+                          return `/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Artwork, Collection, DesignProject } from './types';
+
+export const collections: Collection[] = ${JSON.stringify(collections, null, 2)};
+
+export const artworks: Artwork[] = ${JSON.stringify(artworks, null, 2)};
+
+export const artistProfile = ${JSON.stringify(artistProfile, null, 2)};
+
+export const defaultDesignProjects: DesignProject[] = ${JSON.stringify(designProjects, null, 2)};
+`;
+                        };
+                        navigator.clipboard.writeText(generateCode());
+                        setIsCopied(true);
+                        setTimeout(() => setIsCopied(false), 3000);
+                      }}
+                      className="flex items-center gap-1.5 bg-stone-800 hover:bg-stone-700 text-white font-mono text-[9px] py-1.5 px-3 uppercase tracking-wider transition-all"
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check size={11} className="text-emerald-400 animate-pulse" />
+                          <span className="text-emerald-400 font-bold">¡Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={11} />
+                          <span>Copiar código de data.ts</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <textarea
+                    readOnly
+                    value={`/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Artwork, Collection, DesignProject } from './types';
+
+export const collections: Collection[] = ${JSON.stringify(collections, null, 2)};
+
+export const artworks: Artwork[] = ${JSON.stringify(artworks, null, 2)};
+
+export const artistProfile = ${JSON.stringify(artistProfile, null, 2)};
+
+export const defaultDesignProjects: DesignProject[] = ${JSON.stringify(designProjects, null, 2)};
+`}
+                    className="w-full h-80 font-mono text-[10px] bg-stone-950 text-[#C1C1BF] p-4 outline-none border border-stone-800 leading-normal"
+                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                  />
                 </div>
               </div>
             )}

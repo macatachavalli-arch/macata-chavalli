@@ -37,14 +37,15 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
     if (inquiry) {
       if (inquiry.type === 'branding') {
         setInquiryType('branding');
-        setSubject('Proyecto de Branding & Diseño');
+        setSubject('');
         setArtworkInfo('');
-        setMessage(`Hola Macata,\n\nMe pongo en contacto para consultarte por un proyecto de Branding & Diseño para mi marca o negocio.\n\nContame un poco de tu idea:\n- Nombre del proyecto:\n- Rubro o sector:\n- ¿Qué piezas o servicios necesitás? (identidad visual, packaging, diseño editorial, etc.):\n\n¡Muchas gracias!`);
+        setMessage('');
       } else {
         setInquiryType('obra');
-        setSubject(`Consulta de obra: ${inquiry.artworkTitle}`);
-        setArtworkInfo(`${inquiry.artworkTitle} (${inquiry.size}, ${inquiry.frame})`);
-        setMessage(`Hola Maca,\n\nEstoy interesado en adquirir tu obra original "${inquiry.artworkTitle}" con la siguiente configuración:\n- Tamaño: ${inquiry.size}\n- Enmarcado: ${inquiry.frame}\n\nPor favor envíame detalles sobre tarifas de envío y disponibilidad de entrega. ¡Gracias!`);
+        setSubject('');
+        const hasFrame = inquiry.frame && inquiry.frame !== 'Sin enmarcar';
+        setArtworkInfo(hasFrame ? `${inquiry.artworkTitle} (${inquiry.size}, ${inquiry.frame})` : `${inquiry.artworkTitle} (${inquiry.size})`);
+        setMessage('');
       }
       
       // Auto-scrolling to Contact section
@@ -59,26 +60,27 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
   const handleInquiryTypeChange = (type: 'obra' | 'encargo' | 'general' | 'branding') => {
     setInquiryType(type);
     if (type === 'general') {
-      setSubject('Consulta general');
+      setSubject('');
       setArtworkInfo('');
       setMessage('');
     } else if (type === 'encargo') {
-      setSubject('Encargo de obra personalizada');
+      setSubject('');
       setArtworkInfo('');
-      setMessage(`Hola Maca,\n\nMe encantaría encargarte una obra de arte personalizada basada en tu estilo. \n\nMis preferencias:\n- Medida estimada: ${commissionSize} cm\n- Colores de preferencia:\n- Espacio donde lucirá:\n\n¡Espero tus ideas para comenzar a planificar juntos!`);
+      setMessage('');
     } else if (type === 'branding') {
-      setSubject('Proyecto de Branding & Diseño');
+      setSubject('');
       setArtworkInfo('');
-      setMessage(`Hola Macata,\n\nMe pongo en contacto para consultarte por un proyecto de Branding & Diseño para mi marca o negocio.\n\nContame un poco de tu idea:\n- Nombre del proyecto:\n- Rubro o sector:\n- ¿Qué piezas o servicios necesitás? (identidad visual, packaging, diseño editorial, etc.):\n\n¡Muchas gracias!`);
+      setMessage('');
     } else {
-      setSubject(artworkInfo ? `Consulta de obra: ${artworkInfo}` : 'Consulta por obra en catálogo');
+      setSubject('');
+      setMessage('');
     }
   };
 
   // Update commission prefilled message automatically if commission size changes
   useEffect(() => {
     if (inquiryType === 'encargo') {
-      setMessage(`Hola Maca,\n\nMe encantaría encargarte una obra de arte personalizada basada en tu estilo. \n\nMis preferencias:\n- Medida comprometida: ${commissionSize} cm\n- Colores de preferencia:\n- Espacio donde lucirá:\n\n¡Espero tus ideas para comenzar a planificar juntos!`);
+      setMessage('');
     }
   }, [commissionSize, inquiryType]);
 
@@ -306,8 +308,8 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                 required
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Escribe el asunto"
-                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-[#A1A19F]"
+                placeholder="Escribe el asunto..."
+                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-stone-400 placeholder-[#71716F]/60"
               />
             </div>
 
@@ -321,8 +323,8 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                 required
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Escribe tu mensaje..."
-                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-[#A1A19F] resize-none"
+                placeholder="Escribe el mensaje..."
+                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-stone-400 placeholder-[#71716F]/60 resize-none"
               />
             </div>
 
@@ -344,20 +346,9 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
               <CheckCircle2 size={24} />
             </div>
             
-            <h3 className="text-2xl font-light tracking-wide text-[#1A1A1A] mb-2" style={{ fontFamily: 'Georgia, serif' }}>
+            <h3 className="text-2xl font-light tracking-wide text-[#1A1A1A] mb-10" style={{ fontFamily: 'Georgia, serif' }}>
               {submittedLetter?.fallbackNeeded ? '¡Mensaje Preparado!' : '¡Mensaje Enviado!'}
             </h3>
-            <p className="text-xs text-[#71716F] max-w-md mx-auto mb-10 leading-relaxed">
-              {submittedLetter?.fallbackNeeded ? (
-                <span>
-                  Gracias, <strong>{submittedLetter?.name}</strong>. Tu mensaje se ha procesado. Para asegurar su envío inmediato, puedes despacharlo usando tu correo habitual (Gmail/Outlook/etc.) haciendo clic aquí abajo:
-                </span>
-              ) : (
-                <span>
-                  Gracias, <strong>{submittedLetter?.name}</strong>. Tu mensaje ha sido transmitido correctamente. Maca responderá directamente a tu casilla <strong>{submittedLetter?.email}</strong>.
-                </span>
-              )}
-            </p>
 
             {submittedLetter?.fallbackNeeded && (
               <div className="mb-10 text-center">
