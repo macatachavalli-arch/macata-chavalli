@@ -40,7 +40,7 @@ export const artworks: Artwork[] = [
     "imageUrls": [
       "https://i.imgur.com/iryztrV.png"
     ],
-    "description": "Transformación interior y purificación del alma. \nSabiduría, iluminación y consciencia.",
+    "description": "Transformación interior y purificación del alma. \nSabiduría, iluminación y consciencia.\n--\n--\nAcabado barniz mate.",
     "featured": false
   },
   {
@@ -55,7 +55,7 @@ export const artworks: Artwork[] = [
       "https://i.imgur.com/P3oLTYa.png",
       "https://i.imgur.com/wr3M1Hh.png"
     ],
-    "description": "Lleno de magia y amor listo para colgar.\nAcabado  barniz mate.",
+    "description": "El beso del Sol y la Luna, el abrazo cósmico entre astros.  Momento de encuentro y de reinicio. \n--\n--\nAcabado barniz mate.",
     "featured": false
   },
   {
