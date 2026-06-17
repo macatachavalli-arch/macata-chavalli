@@ -30,6 +30,35 @@ export const collections: Collection[] = [
 
 export const artworks: Artwork[] = [
   {
+    "id": "custom-art-1781658151337",
+    "title": "Alquimia",
+    "collection": "originales",
+    "year": "2026",
+    "medium": "Acrílico sobre MDF",
+    "size": "50 x 70 cm",
+    "imageUrl": "https://i.imgur.com/iryztrV.png",
+    "imageUrls": [
+      "https://i.imgur.com/iryztrV.png"
+    ],
+    "description": "Transformación interior y purificación del alma. \nSabiduría, iluminación y consciencia.",
+    "featured": false
+  },
+  {
+    "id": "custom-art-1781655243513",
+    "title": "Eclipse",
+    "collection": "originales",
+    "year": "2025",
+    "medium": "Acrílico sobre MDF",
+    "size": "20 x 30 cm",
+    "imageUrl": "https://i.imgur.com/P3oLTYa.png",
+    "imageUrls": [
+      "https://i.imgur.com/P3oLTYa.png",
+      "https://i.imgur.com/wr3M1Hh.png"
+    ],
+    "description": "Lleno de magia y amor listo para colgar.\nAcabado  barniz mate.",
+    "featured": false
+  },
+  {
     "id": "vibrant-canvas",
     "title": "Movimiento Solar",
     "collection": "originales",
