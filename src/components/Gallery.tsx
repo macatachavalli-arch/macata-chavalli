@@ -320,6 +320,7 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
                             <>
                               <option value="A4 (21 x 29.7 cm)">Lámina A4 (21 x 29.7 cm)</option>
                               <option value="A3 (29.7 x 42 cm)">Lámina A3 (29.7 x 42 cm)</option>
+                              <option value="Impresión Canva">Impresión Canva</option>
                             </>
                           ) : (
                             <>
