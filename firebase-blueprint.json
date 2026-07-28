@@ -1,0 +1,30 @@
+{
+  "entities": {
+    "artwork": {
+      "title": "Artwork",
+      "description": "Artworks gallery catalog",
+      "properties": {
+        "title": { "type": "string" },
+        "collection": { "type": "string" },
+        "year": { "type": "string" },
+        "medium": { "type": "string" },
+        "size": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "imageUrls": { "type": "array", "items": { "type": "string" } },
+        "description": { "type": "string" },
+        "featured": { "type": "boolean" }
+      }
+    },
+    "designProject": {
+      "title": "Design Project",
+      "description": "Design and branding projects",
+      "properties": {
+        "num": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "badgeLeft": { "type": "string" },
+        "badgeRight": { "type": "string" }
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import Header from './components/Header';
@@ -14,6 +14,14 @@ import Footer from './components/Footer';
 import { artworks as defaultArtworks, defaultDesignProjects } from './data';
 import { Artwork, DesignProject } from './types';
 import AdminPanel from './components/AdminPanel';
+import { 
+  subscribeArtworks, 
+  subscribeDesignProjects, 
+  seedDefaultsIfEmpty, 
+  saveArtworkToCloud, 
+  saveDesignProjectToCloud,
+  resetCloudToDefaults 
+} from './lib/firebase';
 
 export default function App() {
   const [artworksList, setArtworksList] = useState<Artwork[]>(() => {
@@ -44,9 +52,9 @@ export default function App() {
         p.num === '03 / LIBROS & CATÁLOGOS' ||
         p.title === 'Sistemas de Identidad' ||
         p.title === 'Arte Gestual' ||
-        (p.id === 'design-1' && p.description?.includes('selectos')) ||
+        (p.id === 'design-1' && (p.description?.includes('selectos') || !p.description?.includes('Diseño de símbolos'))) ||
         (p.id === 'design-2' && (p.description?.includes('Distribución equilibrada') || !p.description?.includes('acompañamiento'))) ||
-        (p.id === 'design-3' && (p.description?.includes('Pintura abstracta') || p.description?.includes('logotipo gestual.')))
+        p.id === 'design-3'
       );
       if (hasOldData) {
         localStorage.setItem('macata_designs', JSON.stringify(defaultDesignProjects));
@@ -58,6 +66,69 @@ export default function App() {
   });
 
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+  // Initialize Cloud Database & Subscribe to real-time changes
+  useEffect(() => {
+    let unsubArt: (() => void) | null = null;
+    let unsubDesign: (() => void) | null = null;
+
+    async function initCloudSync() {
+      // 1. Seed defaults if cloud Firestore is completely empty
+      await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects);
+
+      // 2. Subscribe to real-time cloud changes for artworks
+      unsubArt = subscribeArtworks((cloudArtworks) => {
+        if (cloudArtworks && cloudArtworks.length > 0) {
+          setArtworksList(cloudArtworks);
+          localStorage.setItem('macata_artworks', JSON.stringify(cloudArtworks));
+        }
+      });
+
+      // 3. Subscribe to real-time cloud changes for design projects
+      unsubDesign = subscribeDesignProjects((cloudDesigns) => {
+        if (cloudDesigns && cloudDesigns.length > 0) {
+          setDesignProjectsList(cloudDesigns);
+          localStorage.setItem('macata_designs', JSON.stringify(cloudDesigns));
+        }
+      });
+
+      // 4. Migrate any local items stored in localStorage to cloud if missing
+      const cachedArt = localStorage.getItem('macata_artworks');
+      if (cachedArt) {
+        try {
+          const parsed = JSON.parse(cachedArt) as Artwork[];
+          for (const item of parsed) {
+            if (item.id.startsWith('custom-art-') || item.id.startsWith('art-')) {
+              await saveArtworkToCloud(item);
+            }
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+
+      const cachedDesign = localStorage.getItem('macata_designs');
+      if (cachedDesign) {
+        try {
+          const parsed = JSON.parse(cachedDesign) as DesignProject[];
+          for (const item of parsed) {
+            if (item.id.startsWith('custom-design-') || item.id.startsWith('design-')) {
+              await saveDesignProjectToCloud(item);
+            }
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+    }
+
+    initCloudSync();
+
+    return () => {
+      if (unsubArt) unsubArt();
+      if (unsubDesign) unsubDesign();
+    };
+  }, []);
 
   const [activeInquiry, setActiveInquiry] = useState<{
     artworkTitle: string;
@@ -87,9 +158,10 @@ export default function App() {
         setArtworks={setArtworksList}
         designProjects={designProjectsList}
         setDesignProjects={setDesignProjectsList}
-        onResetToDefaults={() => {
+        onResetToDefaults={async () => {
           localStorage.removeItem('macata_artworks');
           localStorage.removeItem('macata_designs');
+          await resetCloudToDefaults(defaultArtworks, defaultDesignProjects);
           setArtworksList(defaultArtworks);
           setDesignProjectsList(defaultDesignProjects);
         }}
@@ -153,7 +225,7 @@ export default function App() {
         </div>
 
         {/* Branding Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {designProjectsList.map((project) => (
             <div key={project.id} className="bg-white p-8 border border-[#E5E5E1] flex flex-col justify-between">
               <div>
@@ -171,7 +243,7 @@ export default function App() {
             </div>
           ))}
           {designProjectsList.length === 0 && (
-            <div className="col-span-1 md:col-span-3 py-12 text-center text-stone-400 font-mono text-[10px] uppercase tracking-widest border border-dashed border-[#E5E5E1]">
+            <div className="col-span-1 md:col-span-2 py-12 text-center text-stone-400 font-mono text-[10px] uppercase tracking-widest border border-dashed border-[#E5E5E1]">
               No hay proyectos de diseño publicados por el momento.
             </div>
           )}

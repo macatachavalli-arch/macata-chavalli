@@ -4,9 +4,15 @@
  */
 
 import React, { useState } from 'react';
-import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw, Copy, Check } from 'lucide-react';
+import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw, Upload, Cloud } from 'lucide-react';
 import { Artwork, DesignProject } from '../types';
-import { collections, artistProfile } from '../data';
+import { collections } from '../data';
+import { 
+  saveArtworkToCloud, 
+  deleteArtworkFromCloud, 
+  saveDesignProjectToCloud, 
+  deleteDesignProjectFromCloud 
+} from '../lib/firebase';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -34,10 +40,10 @@ export default function AdminPanel({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<'obras' | 'diseños' | 'sincronizar'>('obras');
-  const [isCopied, setIsCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'obras' | 'diseños'>('obras');
 
   // New & Edit Artwork Form State
   const [editingArtwork, setEditingArtwork] = useState<Artwork | null>(null);
@@ -87,7 +93,28 @@ export default function AdminPanel({
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(''), 4000);
+    setTimeout(() => setSuccessMsg(''), 5000);
+  };
+
+  // Handle local file selection to convert to base64 Data URL
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setTargetState: (val: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      setErrorMsg('La imagen seleccionada supera los 8MB. Selecciona un archivo más liviano.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setTargetState(reader.result);
+        showSuccess('✓ Imagen de tu dispositivo cargada correctamente');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Reset Artwork Form
@@ -126,61 +153,82 @@ export default function AdminPanel({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Add or Edit Artwork Submit
-  const handleAddArtwork = (e: React.FormEvent) => {
+  // Add or Edit Artwork Submit (Cloud Firestore sync)
+  const handleAddArtwork = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!artTitle || !artMedium || !artSize) {
       setErrorMsg('Por favor completa los campos principales de la obra.');
       return;
     }
 
-    const defaultImg = artImgUrl1.trim() || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80';
-    const finalImageUrls = [
-      defaultImg,
-      ...(artImgUrl2.trim() ? [artImgUrl2.trim()] : []),
-      ...(artImgUrl3.trim() ? [artImgUrl3.trim()] : [])
-    ];
-
-    const updatedArt: Artwork = {
-      id: editingArtwork ? editingArtwork.id : `custom-art-${Date.now()}`,
-      title: artTitle,
-      collection: artCol,
-      year: artYear,
-      medium: artMedium,
-      size: artSize,
-      imageUrl: defaultImg,
-      imageUrls: finalImageUrls,
-      description: artDesc.trim(),
-      featured: artFeatured
-    };
-
-    let updatedList: Artwork[];
-    if (editingArtwork) {
-      updatedList = artworks.map(a => a.id === editingArtwork.id ? updatedArt : a);
-      showSuccess(`¡Se guardaron los cambios de la obra "${artTitle}" con éxito!`);
-    } else {
-      updatedList = [updatedArt, ...artworks];
-      showSuccess('¡Nueva obra agregada con éxito al catálogo!');
-    }
-
-    setArtworks(updatedList);
-    localStorage.setItem('macata_artworks', JSON.stringify(updatedList));
-    resetArtworkForm();
+    setIsSaving(true);
     setErrorMsg('');
+
+    try {
+      const defaultImg = artImgUrl1.trim() || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80';
+      const finalImageUrls = [
+        defaultImg,
+        ...(artImgUrl2.trim() ? [artImgUrl2.trim()] : []),
+        ...(artImgUrl3.trim() ? [artImgUrl3.trim()] : [])
+      ];
+
+      const updatedArt: Artwork = {
+        id: editingArtwork ? editingArtwork.id : `art-${Date.now()}`,
+        title: artTitle,
+        collection: artCol,
+        year: artYear,
+        medium: artMedium,
+        size: artSize,
+        imageUrl: defaultImg,
+        imageUrls: finalImageUrls,
+        description: artDesc.trim(),
+        featured: artFeatured
+      };
+
+      // 1. Save directly to Cloud Firestore
+      await saveArtworkToCloud(updatedArt);
+
+      // 2. Update local state & localStorage backup
+      let updatedList: Artwork[];
+      if (editingArtwork) {
+        updatedList = artworks.map(a => a.id === editingArtwork.id ? updatedArt : a);
+        showSuccess(`¡Se guardaron y sincronizaron los cambios de "${artTitle}" en la nube!`);
+      } else {
+        updatedList = [updatedArt, ...artworks];
+        showSuccess('¡Nueva obra guardada en la nube y publicada exitosamente!');
+      }
+
+      setArtworks(updatedList);
+      localStorage.setItem('macata_artworks', JSON.stringify(updatedList));
+      resetArtworkForm();
+    } catch (err: any) {
+      console.error('Error saving artwork to cloud:', err);
+      setErrorMsg('Ocurrió un error al guardar en la nube. Por favor intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Delete Artwork
-  const handleDeleteArtwork = (id: string) => {
-    const updated = artworks.filter(a => a.id !== id);
-    setArtworks(updated);
-    localStorage.setItem('macata_artworks', JSON.stringify(updated));
-    showSuccess('Obra eliminada del catálogo con éxito.');
-    
-    // If we were editing this deleted artwork, reset the form
-    if (editingArtwork && editingArtwork.id === id) {
-      resetArtworkForm();
+  // Delete Artwork from Cloud & Local
+  const handleDeleteArtwork = async (id: string) => {
+    setIsSaving(true);
+    try {
+      await deleteArtworkFromCloud(id);
+      const updated = artworks.filter(a => a.id !== id);
+      setArtworks(updated);
+      localStorage.setItem('macata_artworks', JSON.stringify(updated));
+      showSuccess('Obra eliminada del catálogo y de la nube con éxito.');
+      
+      if (editingArtwork && editingArtwork.id === id) {
+        resetArtworkForm();
+      }
+    } catch (err) {
+      console.error('Error deleting artwork from cloud:', err);
+      setErrorMsg('Error al eliminar de la nube.');
+    } finally {
+      setIsSaving(false);
+      setDeletingArtId(null);
     }
-    setDeletingArtId(null);
   };
 
   // Reset Design Project Form
@@ -204,51 +252,71 @@ export default function AdminPanel({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Add or Edit Design Project Submit
-  const handleAddDesign = (e: React.FormEvent) => {
+  // Add or Edit Design Project Submit (Cloud Firestore sync)
+  const handleAddDesign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!designTitle || !designDesc) {
       setErrorMsg('Por favor completa el título y la descripción del proyecto de diseño.');
       return;
     }
 
-    const autoNum = designNum.trim() || `0${designProjects.length + 1} / PROYECTO`;
-
-    const updatedDesign: DesignProject = {
-      id: editingDesign ? editingDesign.id : `custom-design-${Date.now()}`,
-      num: autoNum.toUpperCase(),
-      title: designTitle,
-      description: designDesc,
-      badgeLeft: designBadgeLeft || 'Dirección Creativa',
-      badgeRight: designBadgeRight
-    };
-
-    let updatedList: DesignProject[];
-    if (editingDesign) {
-      updatedList = designProjects.map(d => d.id === editingDesign.id ? updatedDesign : d);
-      showSuccess(`¡Se guardaron los cambios del proyecto "${designTitle}" con éxito!`);
-    } else {
-      updatedList = [...designProjects, updatedDesign];
-      showSuccess('¡Proyecto de Diseño y Branding agregado con éxito!');
-    }
-
-    setDesignProjects(updatedList);
-    localStorage.setItem('macata_designs', JSON.stringify(updatedList));
-    resetDesignForm();
+    setIsSaving(true);
     setErrorMsg('');
+
+    try {
+      const autoNum = designNum.trim() || `0${designProjects.length + 1} / PROYECTO`;
+
+      const updatedDesign: DesignProject = {
+        id: editingDesign ? editingDesign.id : `design-${Date.now()}`,
+        num: autoNum.toUpperCase(),
+        title: designTitle,
+        description: designDesc,
+        badgeLeft: designBadgeLeft || 'Dirección Creativa',
+        badgeRight: designBadgeRight
+      };
+
+      await saveDesignProjectToCloud(updatedDesign);
+
+      let updatedList: DesignProject[];
+      if (editingDesign) {
+        updatedList = designProjects.map(d => d.id === editingDesign.id ? updatedDesign : d);
+        showSuccess(`¡Se guardaron y sincronizaron los cambios del proyecto "${designTitle}" en la nube!`);
+      } else {
+        updatedList = [...designProjects, updatedDesign];
+        showSuccess('¡Proyecto de Diseño guardado en la nube y publicado con éxito!');
+      }
+
+      setDesignProjects(updatedList);
+      localStorage.setItem('macata_designs', JSON.stringify(updatedList));
+      resetDesignForm();
+    } catch (err) {
+      console.error('Error saving design project to cloud:', err);
+      setErrorMsg('Ocurrió un error al guardar en la nube.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Delete Design Project
-  const handleDeleteDesign = (id: string) => {
-    const updated = designProjects.filter(p => p.id !== id);
-    setDesignProjects(updated);
-    localStorage.setItem('macata_designs', JSON.stringify(updated));
-    showSuccess('Proyecto de diseño eliminado con éxito.');
+  const handleDeleteDesign = async (id: string) => {
+    setIsSaving(true);
+    try {
+      await deleteDesignProjectFromCloud(id);
+      const updated = designProjects.filter(p => p.id !== id);
+      setDesignProjects(updated);
+      localStorage.setItem('macata_designs', JSON.stringify(updated));
+      showSuccess('Proyecto de diseño eliminado con éxito.');
 
-    if (editingDesign && editingDesign.id === id) {
-      resetDesignForm();
+      if (editingDesign && editingDesign.id === id) {
+        resetDesignForm();
+      }
+    } catch (err) {
+      console.error('Error deleting design project from cloud:', err);
+      setErrorMsg('Error al eliminar de la nube.');
+    } finally {
+      setIsSaving(false);
+      setDeletingDesignId(null);
     }
-    setDeletingDesignId(null);
   };
 
   return (
@@ -334,8 +402,14 @@ export default function AdminPanel({
             {/* Dashboard Sub-Header bar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#E5E5E1] pb-6">
               <div>
-                <div className="flex items-center gap-1.5 text-[10px] uppercase font-mono text-[#71716F] font-bold">
-                  <Sparkles size={11} className="text-amber-600" /> Sesión Iniciada como Macata Chavalli
+                <div className="flex items-center gap-2 text-[10px] uppercase font-mono font-bold">
+                  <span className="flex items-center gap-1.5 text-[#71716F]">
+                    <Sparkles size={11} className="text-amber-600" /> Sesión Iniciada como Macata Chavalli
+                  </span>
+                  <span className="text-[#E5E5E1]">|</span>
+                  <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
+                    <Cloud size={11} className="text-emerald-600 animate-pulse" /> Nube Sincronizada
+                  </span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-light tracking-wider uppercase text-[#1a1a1a] mt-1" style={{ fontFamily: 'Georgia, serif' }}>
                   Gestor de Portfolio & Obras
@@ -405,20 +479,6 @@ export default function AdminPanel({
                 }`}
               >
                 Diseño & Branding ({designProjects.length})
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('sincronizar');
-                  setErrorMsg('');
-                  setIsCopied(false);
-                }}
-                className={`pb-3 text-xs tracking-[0.2em] uppercase font-bold transition-all flex items-center gap-1.5 ${
-                  activeTab === 'sincronizar'
-                    ? 'text-[#1A1A1A] border-b-2 border-[#1A1A1A]'
-                    : 'text-[#71716F] hover:text-[#1A1A1A]'
-                }`}
-              >
-                ☁ Sincronizar en Vercel
               </button>
             </div>
 
@@ -506,39 +566,77 @@ export default function AdminPanel({
                     {/* Multi-Image upload sector */}
                     <div>
                       <label className="font-mono uppercase tracking-wider text-[9px] text-[#222] font-bold block mb-1.5">
-                        Imágenes de la Obra (Hasta 3 imágenes cargables)
+                        Imágenes de la Obra (Hasta 3 imágenes • URL o subir desde tu dispositivo)
                       </label>
-                      <div className="space-y-2 bg-[#F7F7F5] p-3 border border-[#E5E5E1]">
+                      <div className="space-y-3 bg-[#F7F7F5] p-3 border border-[#E5E5E1]">
                         <div>
                           <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">Imagen 1 (Enfoque Principal) *</label>
-                          <input
-                            type="text"
-                            value={artImgUrl1}
-                            onChange={(e) => setArtImgUrl1(e.target.value)}
-                            placeholder="/src/assets/images/... o https://... (Principal)"
-                            required
-                            className="w-full text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2 border border-[#E5E5E1] focus:border-[#1A1A1A]"
-                          />
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={artImgUrl1}
+                              onChange={(e) => setArtImgUrl1(e.target.value)}
+                              placeholder="URL de la imagen o selecciona un archivo..."
+                              required
+                              className="flex-1 text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2 border border-[#E5E5E1] focus:border-[#1A1A1A]"
+                            />
+                            <label className="cursor-pointer bg-stone-200 hover:bg-stone-300 text-stone-800 p-2 text-[10px] font-mono flex items-center gap-1 uppercase tracking-wider transition-all whitespace-nowrap border border-stone-300">
+                              <Upload size={12} />
+                              <span>Subir...</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e, setArtImgUrl1)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         </div>
+
                         <div>
                           <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">Imagen 2 (Detalle / Textura)</label>
-                          <input
-                            type="text"
-                            value={artImgUrl2}
-                            onChange={(e) => setArtImgUrl2(e.target.value)}
-                            placeholder="/src/assets/images/... o https://... (Ángulo o detalle)"
-                            className="w-full text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2 border border-[#E5E5E1] focus:border-[#1A1A1A]"
-                          />
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={artImgUrl2}
+                              onChange={(e) => setArtImgUrl2(e.target.value)}
+                              placeholder="URL o selecciona un archivo..."
+                              className="flex-1 text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2 border border-[#E5E5E1] focus:border-[#1A1A1A]"
+                            />
+                            <label className="cursor-pointer bg-stone-200 hover:bg-stone-300 text-stone-800 p-2 text-[10px] font-mono flex items-center gap-1 uppercase tracking-wider transition-all whitespace-nowrap border border-stone-300">
+                              <Upload size={12} />
+                              <span>Subir...</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e, setArtImgUrl2)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         </div>
+
                         <div>
                           <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">Imagen 3 (Configuración / Enmarcado)</label>
-                          <input
-                            type="text"
-                            value={artImgUrl3}
-                            onChange={(e) => setArtImgUrl3(e.target.value)}
-                            placeholder="/src/assets/images/... o https://... (Ambientada o enmarcada)"
-                            className="w-full text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2 border border-[#E5E5E1] focus:border-[#1A1A1A]"
-                          />
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={artImgUrl3}
+                              onChange={(e) => setArtImgUrl3(e.target.value)}
+                              placeholder="URL o selecciona un archivo..."
+                              className="flex-1 text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2 border border-[#E5E5E1] focus:border-[#1A1A1A]"
+                            />
+                            <label className="cursor-pointer bg-stone-200 hover:bg-stone-300 text-stone-800 p-2 text-[10px] font-mono flex items-center gap-1 uppercase tracking-wider transition-all whitespace-nowrap border border-stone-300">
+                              <Upload size={12} />
+                              <span>Subir...</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e, setArtImgUrl3)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -587,11 +685,23 @@ export default function AdminPanel({
                       )}
                       <button
                         type="submit"
-                        className={`font-sans font-bold uppercase tracking-[0.2em] py-3 rounded-none text-[9px] transition-all ${
+                        disabled={isSaving}
+                        className={`font-sans font-bold uppercase tracking-[0.2em] py-3 rounded-none text-[9px] transition-all flex items-center justify-center gap-2 ${
+                          isSaving ? 'opacity-70 cursor-not-allowed bg-stone-700 text-white' : ''
+                        } ${
                           editingArtwork ? 'w-2/3 bg-[#1A1A1A] text-white hover:bg-stone-800' : 'w-full bg-[#1A1A1A] text-white hover:bg-stone-800'
                         }`}
                       >
-                        {editingArtwork ? 'Guardar Cambios' : 'Publicar Obra en Galería'}
+                        {isSaving ? (
+                          <>
+                            <Cloud size={12} className="animate-bounce" />
+                            <span>Guardando en la nube...</span>
+                          </>
+                        ) : editingArtwork ? (
+                          'Guardar Cambios'
+                        ) : (
+                          'Publicar Obra en Galería'
+                        )}
                       </button>
                     </div>
                   </form>
@@ -786,11 +896,23 @@ export default function AdminPanel({
                       )}
                       <button
                         type="submit"
-                        className={`font-sans font-bold uppercase tracking-[0.2em] py-3 rounded-none text-[9px] transition-all ${
+                        disabled={isSaving}
+                        className={`font-sans font-bold uppercase tracking-[0.2em] py-3 rounded-none text-[9px] transition-all flex items-center justify-center gap-2 ${
+                          isSaving ? 'opacity-70 cursor-not-allowed bg-stone-700 text-white' : ''
+                        } ${
                           editingDesign ? 'w-2/3 bg-[#1A1A1A] text-white hover:bg-stone-800' : 'w-full bg-[#1A1A1A] text-white hover:bg-stone-800'
                         }`}
                       >
-                        {editingDesign ? 'Guardar Cambios' : 'Publicar Proyecto de Diseño'}
+                        {isSaving ? (
+                          <>
+                            <Cloud size={12} className="animate-bounce" />
+                            <span>Guardando en la nube...</span>
+                          </>
+                        ) : editingDesign ? (
+                          'Guardar Cambios'
+                        ) : (
+                          'Publicar Proyecto de Diseño'
+                        )}
                       </button>
                     </div>
                   </form>
@@ -870,119 +992,6 @@ export default function AdminPanel({
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: SINCRONIZAR CON VERCEL / GITHUB */}
-            {activeTab === 'sincronizar' && (
-              <div className="bg-white p-6 border border-[#E5E5E1] space-y-6">
-                <div>
-                  <h4 className="text-sm font-bold tracking-wider uppercase text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
-                    Sincronización sin Base de Datos Externa
-                  </h4>
-                  <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#71716F] mt-1">
-                    ☁ ¿POR QUÉ EN VERCEL SIGUES VIENDO LAS OBRAS DE EJEMPLO?
-                  </p>
-                </div>
-
-                <div className="space-y-4 text-xs leading-relaxed text-stone-700">
-                  <div className="bg-stone-50 p-4 border border-stone-200 space-y-3">
-                    <p>
-                      Al subir o editar tus obras en este panel, los cambios se guardan <strong>de forma segura en la memoria de tu navegador (localStorage)</strong>. Por eso tú los ves perfectamente en tu pantalla actual.
-                    </p>
-                    <p>
-                      Sin embargo, <strong>Vercel compila tu sitio web a partir del código de tu repositorio (en GitHub)</strong>, leyendo directamente los datos predeterminados en el archivo <code>src/data.ts</code>. Para que tus nuevas obras se muestren a todo el público en Vercel, ese archivo de código debe actualizarse.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h5 className="font-mono uppercase tracking-wider text-[9px] text-[#1a1a1a] font-bold">
-                      ✦ PASO A PASO PARA ACTUALIZAR VERCEL (100% GRATIS Y SIN COMPLICACIONES)
-                    </h5>
-                    <ol className="list-decimal pl-5 space-y-1.5 text-stone-600">
-                      <li>Haz todas las cargas de obras y ediciones necesarias en este panel de control hasta estar conforme.</li>
-                      <li>Haz clic en el botón <strong>"Copiar código de data.ts"</strong> que ves aquí abajo.</li>
-                      <li>Abre el archivo <code>src/data.ts</code> en tu editor de código o directamente en tu cuenta de GitHub.</li>
-                      <li>Selecciona todo el contenido de ese archivo, bórralo y **pega** el código que acabas de copiar.</li>
-                      <li>Guarda los cambios y súbelos. <strong>¡Vercel detectará el cambio y publicará tu web con tus obras actualizadas en 1 minuto!</strong></li>
-                    </ol>
-
-                    <div className="bg-amber-50 border border-amber-200 text-amber-950 p-3 mt-4 font-mono text-[10px] uppercase">
-                      💡 <strong>¿DATO ÚTIL?</strong> Como estás chateando conmigo (tu asistente), puedes simplemente decirme: <br />
-                      <span className="italic block mt-1.5 font-bold text-stone-900 bg-white p-1.5 px-3 border border-amber-100 font-sans normal-case">
-                        "Asistente, actualiza mi archivo src/data.ts con las obras que acabo de crear"
-                      </span>
-                      y yo me encargaré de escribirlo automáticamente en los archivos de tu app de forma inmediata.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Code Area with Copy button */}
-                <div className="space-y-2 pt-2">
-                  <div className="flex justify-between items-center bg-[#1A1A1A] p-2 text-white">
-                    <span className="font-mono text-[9px] uppercase tracking-wider pl-2 text-stone-400">
-                      CÓDIGO GENERADO PARA src/data.ts
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const generateCode = () => {
-                          return `/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { Artwork, Collection, DesignProject } from './types';
-
-export const collections: Collection[] = ${JSON.stringify(collections, null, 2)};
-
-export const artworks: Artwork[] = ${JSON.stringify(artworks, null, 2)};
-
-export const artistProfile = ${JSON.stringify(artistProfile, null, 2)};
-
-export const defaultDesignProjects: DesignProject[] = ${JSON.stringify(designProjects, null, 2)};
-`;
-                        };
-                        navigator.clipboard.writeText(generateCode());
-                        setIsCopied(true);
-                        setTimeout(() => setIsCopied(false), 3000);
-                      }}
-                      className="flex items-center gap-1.5 bg-stone-800 hover:bg-stone-700 text-white font-mono text-[9px] py-1.5 px-3 uppercase tracking-wider transition-all"
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check size={11} className="text-emerald-400 animate-pulse" />
-                          <span className="text-emerald-400 font-bold">¡Copiado!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={11} />
-                          <span>Copiar código de data.ts</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <textarea
-                    readOnly
-                    value={`/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { Artwork, Collection, DesignProject } from './types';
-
-export const collections: Collection[] = ${JSON.stringify(collections, null, 2)};
-
-export const artworks: Artwork[] = ${JSON.stringify(artworks, null, 2)};
-
-export const artistProfile = ${JSON.stringify(artistProfile, null, 2)};
-
-export const defaultDesignProjects: DesignProject[] = ${JSON.stringify(designProjects, null, 2)};
-`}
-                    className="w-full h-80 font-mono text-[10px] bg-stone-950 text-[#C1C1BF] p-4 outline-none border border-stone-800 leading-normal"
-                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                  />
                 </div>
               </div>
             )}
