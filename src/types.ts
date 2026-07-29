@@ -31,6 +31,14 @@ export interface DesignProject {
   badgeRight: string;
 }
 
+export interface DesignCarouselItem {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  category?: string;
+  order?: number;
+}
+
 export interface InquiryMessage {
   name: string;
   email: string;

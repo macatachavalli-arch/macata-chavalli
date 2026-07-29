@@ -5,13 +5,15 @@
 
 import React, { useState } from 'react';
 import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw, Upload, Cloud } from 'lucide-react';
-import { Artwork, DesignProject } from '../types';
+import { Artwork, DesignProject, DesignCarouselItem } from '../types';
 import { collections } from '../data';
 import { 
   saveArtworkToCloud, 
   deleteArtworkFromCloud, 
   saveDesignProjectToCloud, 
-  deleteDesignProjectFromCloud 
+  deleteDesignProjectFromCloud,
+  saveCarouselItemToCloud,
+  deleteCarouselItemFromCloud
 } from '../lib/firebase';
 
 interface AdminPanelProps {
@@ -21,6 +23,8 @@ interface AdminPanelProps {
   setArtworks: (artworks: Artwork[]) => void;
   designProjects: DesignProject[];
   setDesignProjects: (projects: DesignProject[]) => void;
+  carouselItems: DesignCarouselItem[];
+  setCarouselItems: (items: DesignCarouselItem[]) => void;
   onResetToDefaults: () => void;
 }
 
@@ -31,6 +35,8 @@ export default function AdminPanel({
   setArtworks,
   designProjects,
   setDesignProjects,
+  carouselItems,
+  setCarouselItems,
   onResetToDefaults
 }: AdminPanelProps) {
   // Authentication states
@@ -66,6 +72,12 @@ export default function AdminPanel({
   const [designBadgeLeft, setDesignBadgeLeft] = useState('');
   const [designBadgeRight, setDesignBadgeRight] = useState('★ Premium');
 
+  // Design Carousel Form State
+  const [carouselImgUrl, setCarouselImgUrl] = useState('');
+  const [carouselTitle, setCarouselTitle] = useState('');
+  const [carouselCategory, setCarouselCategory] = useState('Branding');
+  const [deletingCarouselId, setDeletingCarouselId] = useState<string | null>(null);
+
   // Success Indicators
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -96,25 +108,73 @@ export default function AdminPanel({
     setTimeout(() => setSuccessMsg(''), 5000);
   };
 
-  // Handle local file selection to convert to base64 Data URL
+  // Handle local file selection to compress & convert to base64 Data URL for Firestore compatibility
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     setTargetState: (val: string) => void
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      setErrorMsg('La imagen seleccionada supera los 8MB. Selecciona un archivo más liviano.');
-      return;
-    }
+
+    setErrorMsg('');
+
     const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setTargetState(reader.result);
-        showSuccess('✓ Imagen de tu dispositivo cargada correctamente');
-      }
+    reader.onerror = () => {
+      setErrorMsg('Error al leer el archivo seleccionado.');
+    };
+    reader.onload = (event) => {
+      const result = event.target?.result;
+      if (typeof result !== 'string') return;
+
+      const img = new Image();
+      img.onerror = () => {
+        setErrorMsg('El archivo seleccionado no es una imagen válida.');
+      };
+      img.onload = () => {
+        try {
+          // Compress high-resolution images to fit comfortably within Firestore document limits
+          const MAX_WIDTH = 1920;
+          const MAX_HEIGHT = 1080;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            setTargetState(result);
+            showSuccess('✓ Imagen cargada correctamente');
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          // 0.85 quality JPEG compression (~150-300KB)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setTargetState(compressedDataUrl);
+          showSuccess('✓ Imagen procesada y lista para publicar');
+        } catch (err) {
+          console.error('Error compressing image:', err);
+          setTargetState(result);
+          showSuccess('✓ Imagen cargada correctamente');
+        }
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
+
+    // Reset value so same file can be selected again if needed
+    e.target.value = '';
   };
 
   // Reset Artwork Form
@@ -319,6 +379,63 @@ export default function AdminPanel({
     }
   };
 
+  const handleAddCarouselItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!carouselImgUrl) {
+      setErrorMsg('Por favor selecciona o ingresa una imagen para el carrusel.');
+      return;
+    }
+    setIsSaving(true);
+    setErrorMsg('');
+
+    try {
+      const newItem: DesignCarouselItem = {
+        id: `carousel-${Date.now()}`,
+        imageUrl: carouselImgUrl,
+        title: carouselTitle.trim() || 'Muestra de Trabajo de Diseño',
+        category: carouselCategory.trim() || 'Branding',
+        order: carouselItems.length + 1
+      };
+
+      await saveCarouselItemToCloud(newItem);
+      const updated = [...carouselItems, newItem];
+      setCarouselItems(updated);
+      localStorage.setItem('macata_carousel', JSON.stringify(updated));
+      showSuccess('¡Nueva imagen publicada en el carrusel y guardada en la nube!');
+
+      setCarouselImgUrl('');
+      setCarouselTitle('');
+      setCarouselCategory('Branding');
+    } catch (err: any) {
+      console.error('Error saving carousel item:', err);
+      const msg = err?.message || String(err);
+      if (msg.includes('exceeds maximum size') || msg.includes('1048576')) {
+        setErrorMsg('La imagen supera el límite de tamaño permitido por la nube. Selecciona un archivo más liviano.');
+      } else {
+        setErrorMsg(`Error al guardar la imagen en el carrusel: ${err?.message || 'intenta nuevamente'}`);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCarouselItem = async (id: string) => {
+    setIsSaving(true);
+    try {
+      await deleteCarouselItemFromCloud(id);
+      const updated = carouselItems.filter(item => item.id !== id);
+      setCarouselItems(updated);
+      localStorage.setItem('macata_carousel', JSON.stringify(updated));
+      showSuccess('Imagen eliminada del carrusel con éxito.');
+    } catch (err) {
+      console.error('Error deleting carousel item:', err);
+      setErrorMsg('Error al eliminar la imagen del carrusel.');
+    } finally {
+      setIsSaving(false);
+      setDeletingCarouselId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F7F7F5] text-stone-900 relative selections:bg-[#1A1A1A]/10 selections:text-[#1A1A1A] pb-24">
       {/* Crisp minimal architectural background lines to match main page theme */}
@@ -449,6 +566,23 @@ export default function AdminPanel({
               <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 text-[11px] font-mono tracking-widest uppercase flex items-center gap-2.5">
                 <CheckCircle size={15} className="text-emerald-600" />
                 <span>{successMsg}</span>
+              </div>
+            )}
+
+            {/* Error Indicators */}
+            {errorMsg && (
+              <div className="bg-red-50 border border-red-200 text-red-800 p-4 text-[11px] font-mono tracking-widest uppercase flex items-center justify-between gap-2.5">
+                <span className="flex items-center gap-2">
+                  <span className="font-bold">⚠</span>
+                  <span>{errorMsg}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setErrorMsg('')}
+                  className="text-red-700 hover:text-red-900 font-mono text-[10px] uppercase underline cursor-pointer"
+                >
+                  Cerrar
+                </button>
               </div>
             )}
 
@@ -991,6 +1125,139 @@ export default function AdminPanel({
                         No hay proyectos de diseño subidos. ¡Carga uno arriba!
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* DIVIDER & CARRUSEL DE MUESTRAS MANAGEMENT */}
+                <div className="lg:col-span-12 border-t border-[#E5E5E1] pt-10 mt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Cloud className="text-emerald-600 animate-pulse" size={18} />
+                    <h4 className="text-sm font-bold tracking-wider uppercase text-[#1a1a1a]" style={{ fontFamily: 'Georgia, serif' }}>
+                      ✦ Gestor de Imágenes del Carrusel (Muestras de Trabajo)
+                    </h4>
+                  </div>
+                  <p className="text-xs text-stone-600 mb-6 font-sans">
+                    Las imágenes agregadas aquí aparecerán en el carrusel de pantalla completa ubicado debajo de las fichas de proyectos de diseño. Podrás subir imágenes directamente desde tu dispositivo o ingresar enlaces.
+                  </p>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    {/* Add Image Form */}
+                    <div className="lg:col-span-5 bg-stone-50 p-6 border border-[#E5E5E1] space-y-4">
+                      <h5 className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#1A1A1A] font-bold border-b border-[#E5E5E1] pb-2">
+                        + Subir / Agregar Imagen al Carrusel
+                      </h5>
+
+                      <form onSubmit={handleAddCarouselItem} className="space-y-4 text-xs">
+                        <div>
+                          <label className="font-mono uppercase tracking-wider text-[9px] text-[#71716F] block mb-1">
+                            Imagen del Carrusel * (Subir archivo o pegar URL)
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={carouselImgUrl}
+                              onChange={(e) => setCarouselImgUrl(e.target.value)}
+                              placeholder="URL de la imagen o presiona Subir..."
+                              required
+                              className="flex-1 text-xs font-sans bg-white outline-none text-[#1A1A1A] p-2.5 border border-[#E5E5E1] focus:border-[#1A1A1A]"
+                            />
+                            <label className="cursor-pointer bg-stone-200 hover:bg-stone-300 text-stone-800 p-2.5 text-[10px] font-mono flex items-center gap-1 uppercase tracking-wider transition-all whitespace-nowrap border border-stone-300">
+                              <Upload size={12} />
+                              <span>Subir...</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUpload(e, setCarouselImgUrl)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        {carouselImgUrl && (
+                          <div className="mt-2 p-2 bg-white border border-[#E5E5E1]">
+                            <span className="text-[8px] font-mono uppercase tracking-wider text-[#71716F] block mb-1">Previsualización:</span>
+                            <img src={carouselImgUrl} alt="Preview" className="h-28 w-full object-cover border border-stone-200" />
+                          </div>
+                        )}
+
+                        <button
+                          type="submit"
+                          disabled={isSaving}
+                          className="w-full bg-[#1A1A1A] text-white hover:bg-stone-800 py-3 font-sans font-bold uppercase tracking-[0.2em] text-[9px] transition-all flex items-center justify-center gap-2"
+                        >
+                          {isSaving ? (
+                            <>
+                              <Cloud size={12} className="animate-bounce" />
+                              <span>Guardando en la nube...</span>
+                            </>
+                          ) : (
+                            <span>+ Publicar Imagen en Carrusel</span>
+                          )}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Carousel Images List */}
+                    <div className="lg:col-span-7 space-y-4">
+                      <h5 className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#1A1A1A] font-bold border-b border-[#E5E5E1] pb-2">
+                        ✦ Imágenes en el Carrusel ({carouselItems.length})
+                      </h5>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto pr-2">
+                        {carouselItems.map((item) => (
+                          <div key={item.id} className="bg-white p-3 border border-[#E5E5E1] flex flex-col justify-between hover:border-stone-400 transition-colors">
+                            <div className="relative aspect-[16/10] overflow-hidden bg-stone-100 mb-2 border border-stone-200">
+                              <img
+                                src={item.imageUrl}
+                                alt="Imagen de Carrusel"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+
+                            <div className="mt-3 pt-2 border-t border-stone-100 flex justify-between items-center">
+                              {deletingCarouselId === item.id ? (
+                                <div className="flex items-center gap-1 bg-red-50 p-1 border border-red-200 w-full justify-between">
+                                  <span className="text-[8px] font-mono font-medium text-red-700 uppercase">¿Eliminar?</span>
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteCarouselItem(item.id)}
+                                      className="bg-red-700 text-white font-mono text-[8px] px-2 py-0.5 uppercase font-bold"
+                                    >
+                                      Sí
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeletingCarouselId(null)}
+                                      className="bg-stone-200 text-stone-800 font-mono text-[8px] px-2 py-0.5 uppercase font-bold"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingCarouselId(item.id)}
+                                  className="w-full py-1 bg-red-50 hover:bg-red-100 text-red-800 font-mono text-[9px] uppercase tracking-wider flex items-center justify-center gap-1 border border-red-200 transition-all"
+                                >
+                                  <Trash2 size={11} />
+                                  <span>Eliminar del Carrusel</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                        {carouselItems.length === 0 && (
+                          <div className="col-span-full py-16 text-center text-[#71716F] font-mono text-[10px] uppercase tracking-widest border border-dashed border-[#E5E5E1] bg-white">
+                            No hay imágenes cargadas en el carrusel por el momento.
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

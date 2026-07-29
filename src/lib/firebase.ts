@@ -12,7 +12,7 @@ import {
   writeBatch 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Artwork, DesignProject } from '../types';
+import { Artwork, DesignProject, DesignCarouselItem } from '../types';
 
 const app = initializeApp(firebaseConfig);
 
@@ -24,6 +24,7 @@ export const db = getFirestore(
 
 export const ARTWORKS_COLLECTION = 'artworks';
 export const DESIGNS_COLLECTION = 'designProjects';
+export const CAROUSEL_COLLECTION = 'designCarousel';
 
 // Subscribe to real-time updates for artworks
 export function subscribeArtworks(
@@ -78,6 +79,30 @@ export function subscribeDesignProjects(
   );
 }
 
+// Subscribe to real-time updates for design carousel images
+export function subscribeDesignCarousel(
+  onSuccess: (items: DesignCarouselItem[]) => void,
+  onError?: (err: Error) => void
+) {
+  const q = query(collection(db, CAROUSEL_COLLECTION));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: DesignCarouselItem[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data() as DesignCarouselItem;
+        list.push({ ...data, id: docSnap.id });
+      });
+      list.sort((a, b) => (a.order || 0) - (b.order || 0));
+      onSuccess(list);
+    },
+    (err) => {
+      console.error('Error fetching design carousel from Firestore:', err);
+      if (onError) onError(err);
+    }
+  );
+}
+
 // Save or Update an Artwork in Firestore
 export async function saveArtworkToCloud(artwork: Artwork): Promise<void> {
   const id = artwork.id || `art-${Date.now()}`;
@@ -107,10 +132,25 @@ export async function deleteDesignProjectFromCloud(id: string): Promise<void> {
   await deleteDoc(docRef);
 }
 
+// Save or Update a Design Carousel Item in Firestore
+export async function saveCarouselItemToCloud(item: DesignCarouselItem): Promise<void> {
+  const id = item.id || `carousel-${Date.now()}`;
+  const docRef = doc(db, CAROUSEL_COLLECTION, id);
+  const cleanData = JSON.parse(JSON.stringify({ ...item, id }));
+  await setDoc(docRef, cleanData, { merge: true });
+}
+
+// Delete Design Carousel Item from Firestore
+export async function deleteCarouselItemFromCloud(id: string): Promise<void> {
+  const docRef = doc(db, CAROUSEL_COLLECTION, id);
+  await deleteDoc(docRef);
+}
+
 // Initialize and seed default database records if Firestore is empty
 export async function seedDefaultsIfEmpty(
   defaultArtworks: Artwork[], 
-  defaultDesignProjects: DesignProject[]
+  defaultDesignProjects: DesignProject[],
+  defaultCarouselItems: DesignCarouselItem[] = []
 ): Promise<boolean> {
   try {
     const artSnap = await getDocs(collection(db, ARTWORKS_COLLECTION));
@@ -134,6 +174,17 @@ export async function seedDefaultsIfEmpty(
       }
       await batch.commit();
     }
+
+    const carouselSnap = await getDocs(collection(db, CAROUSEL_COLLECTION));
+    if (carouselSnap.empty && defaultCarouselItems.length > 0) {
+      console.log('Seeding default design carousel to Firestore...');
+      const batch = writeBatch(db);
+      for (const item of defaultCarouselItems) {
+        const ref = doc(db, CAROUSEL_COLLECTION, item.id);
+        batch.set(ref, JSON.parse(JSON.stringify(item)));
+      }
+      await batch.commit();
+    }
     return true;
   } catch (e) {
     console.error('Error seeding defaults to Firestore:', e);
@@ -144,7 +195,8 @@ export async function seedDefaultsIfEmpty(
 // Reset cloud database to factory defaults
 export async function resetCloudToDefaults(
   defaultArtworks: Artwork[],
-  defaultDesignProjects: DesignProject[]
+  defaultDesignProjects: DesignProject[],
+  defaultCarouselItems: DesignCarouselItem[] = []
 ): Promise<void> {
   // Delete existing artworks
   const artSnap = await getDocs(collection(db, ARTWORKS_COLLECTION));
@@ -156,6 +208,11 @@ export async function resetCloudToDefaults(
   for (const docSnap of designSnap.docs) {
     await deleteDoc(docSnap.ref);
   }
+  // Delete existing carousel items
+  const carouselSnap = await getDocs(collection(db, CAROUSEL_COLLECTION));
+  for (const docSnap of carouselSnap.docs) {
+    await deleteDoc(docSnap.ref);
+  }
   // Re-seed defaults
-  await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects);
+  await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects, defaultCarouselItems);
 }

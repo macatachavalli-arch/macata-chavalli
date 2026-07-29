@@ -11,15 +11,18 @@ import Gallery from './components/Gallery';
 import BioSection from './components/BioSection';
 import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
-import { artworks as defaultArtworks, defaultDesignProjects } from './data';
-import { Artwork, DesignProject } from './types';
+import { artworks as defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems } from './data';
+import { Artwork, DesignProject, DesignCarouselItem } from './types';
 import AdminPanel from './components/AdminPanel';
+import DesignCarousel from './components/DesignCarousel';
 import { 
   subscribeArtworks, 
   subscribeDesignProjects, 
+  subscribeDesignCarousel,
   seedDefaultsIfEmpty, 
   saveArtworkToCloud, 
   saveDesignProjectToCloud,
+  saveCarouselItemToCloud,
   resetCloudToDefaults 
 } from './lib/firebase';
 
@@ -65,16 +68,30 @@ export default function App() {
     return defaultDesignProjects;
   });
 
+  const [carouselList, setCarouselList] = useState<DesignCarouselItem[]>(() => {
+    const cached = localStorage.getItem('macata_carousel');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        // fall back
+      }
+    }
+    return defaultDesignCarouselItems;
+  });
+
   const [isAdminOpen, setIsAdminOpen] = useState(false);
 
   // Initialize Cloud Database & Subscribe to real-time changes
   useEffect(() => {
     let unsubArt: (() => void) | null = null;
     let unsubDesign: (() => void) | null = null;
+    let unsubCarousel: (() => void) | null = null;
 
     async function initCloudSync() {
       // 1. Seed defaults if cloud Firestore is completely empty
-      await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects);
+      await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems);
 
       // 2. Subscribe to real-time cloud changes for artworks
       unsubArt = subscribeArtworks((cloudArtworks) => {
@@ -92,7 +109,15 @@ export default function App() {
         }
       });
 
-      // 4. Migrate any local items stored in localStorage to cloud if missing
+      // 4. Subscribe to real-time cloud changes for design carousel
+      unsubCarousel = subscribeDesignCarousel((cloudCarousel) => {
+        if (cloudCarousel && cloudCarousel.length > 0) {
+          setCarouselList(cloudCarousel);
+          localStorage.setItem('macata_carousel', JSON.stringify(cloudCarousel));
+        }
+      });
+
+      // 5. Migrate any local items stored in localStorage to cloud if missing
       const cachedArt = localStorage.getItem('macata_artworks');
       if (cachedArt) {
         try {
@@ -120,6 +145,20 @@ export default function App() {
           // ignore parsing error
         }
       }
+
+      const cachedCarousel = localStorage.getItem('macata_carousel');
+      if (cachedCarousel) {
+        try {
+          const parsed = JSON.parse(cachedCarousel) as DesignCarouselItem[];
+          for (const item of parsed) {
+            if (item.id.startsWith('carousel-')) {
+              await saveCarouselItemToCloud(item);
+            }
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
     }
 
     initCloudSync();
@@ -127,6 +166,7 @@ export default function App() {
     return () => {
       if (unsubArt) unsubArt();
       if (unsubDesign) unsubDesign();
+      if (unsubCarousel) unsubCarousel();
     };
   }, []);
 
@@ -158,12 +198,16 @@ export default function App() {
         setArtworks={setArtworksList}
         designProjects={designProjectsList}
         setDesignProjects={setDesignProjectsList}
+        carouselItems={carouselList}
+        setCarouselItems={setCarouselList}
         onResetToDefaults={async () => {
           localStorage.removeItem('macata_artworks');
           localStorage.removeItem('macata_designs');
-          await resetCloudToDefaults(defaultArtworks, defaultDesignProjects);
+          localStorage.removeItem('macata_carousel');
+          await resetCloudToDefaults(defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems);
           setArtworksList(defaultArtworks);
           setDesignProjectsList(defaultDesignProjects);
+          setCarouselList(defaultDesignCarouselItems);
         }}
       />
     );
@@ -225,7 +269,7 @@ export default function App() {
         </div>
 
         {/* Branding Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
           {designProjectsList.map((project) => (
             <div key={project.id} className="bg-white p-8 border border-[#E5E5E1] flex flex-col justify-between">
               <div>
@@ -249,7 +293,8 @@ export default function App() {
           )}
         </div>
 
-
+        {/* Carousel for Design Portfolio Work */}
+        <DesignCarousel items={carouselList} />
       </section>
 
       {/* Biography Section */}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Artwork, Collection, DesignProject } from './types';
+import { Artwork, Collection, DesignProject, DesignCarouselItem } from './types';
 
 export const collections: Collection[] = [
   {
@@ -141,5 +141,43 @@ export const defaultDesignProjects: DesignProject[] = [
     description: 'Diseño de libros, catálogos, colecciones, calendarios y agendas. Arte de tapa y maquetado interior. Consultoría y acompañamiento para tu proyecto editorial autogestivo.',
     badgeLeft: 'Libros & Agendas',
     badgeRight: '★ Especializado'
+  }
+];
+
+export const defaultDesignCarouselItems: DesignCarouselItem[] = [
+  {
+    id: 'carousel-1',
+    imageUrl: 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?auto=format&fit=crop&w=1200&q=80',
+    title: 'Identidad Visual & Sistema de Marca',
+    category: 'Branding',
+    order: 1
+  },
+  {
+    id: 'carousel-2',
+    imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1200&q=80',
+    title: 'Maquetación Editorial & Portada de Libro',
+    category: 'Editorial',
+    order: 2
+  },
+  {
+    id: 'carousel-3',
+    imageUrl: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=1200&q=80',
+    title: 'Papelería & Tipografía Boutique',
+    category: 'Boutique',
+    order: 3
+  },
+  {
+    id: 'carousel-4',
+    imageUrl: 'https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?auto=format&fit=crop&w=1200&q=80',
+    title: 'Catálogo de Colección & Agendas',
+    category: 'Diseño Gráfico',
+    order: 4
+  },
+  {
+    id: 'carousel-5',
+    imageUrl: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=1200&q=80',
+    title: 'Composición Tipográfica & Símbolos',
+    category: 'Arte & Dirección Creativa',
+    order: 5
   }
 ];
