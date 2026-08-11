@@ -1,0 +1,312 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { ArrowDown, ArrowUpRight } from 'lucide-react';
+import Header from './components/Header';
+import Gallery from './components/Gallery';
+import BioSection from './components/BioSection';
+import ContactForm from './components/ContactForm';
+import Footer from './components/Footer';
+import { artworks as defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems } from './data';
+import { Artwork, DesignProject, DesignCarouselItem } from './types';
+import AdminPanel from './components/AdminPanel';
+import DesignCarousel from './components/DesignCarousel';
+import { 
+  subscribeArtworks, 
+  subscribeDesignProjects, 
+  subscribeDesignCarousel,
+  seedDefaultsIfEmpty, 
+  saveArtworkToCloud, 
+  saveDesignProjectToCloud,
+  saveCarouselItemToCloud,
+  resetCloudToDefaults 
+} from './lib/firebase';
+
+export default function App() {
+  const [artworksList, setArtworksList] = useState<Artwork[]>(() => {
+    const cached = localStorage.getItem('macata_artworks');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as Artwork[];
+        return parsed.map((art) => {
+          if (art.description === 'Obra contemporánea texturada con una fina composición libre.') {
+            return { ...art, description: '' };
+          }
+          return art;
+        });
+      } catch (e) {
+        return defaultArtworks;
+      }
+    }
+    return defaultArtworks;
+  });
+
+  const [designProjectsList, setDesignProjectsList] = useState<DesignProject[]>(() => {
+    const cached = localStorage.getItem('macata_designs');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      const hasOldData = parsed.some((p: any) => 
+        p.num === '01 / ID SÓLIDAS' || 
+        p.num === '02 / ENVASES TÁCTILES' || 
+        p.num === '03 / LIBROS & CATÁLOGOS' ||
+        p.title === 'Sistemas de Identidad' ||
+        p.title === 'Arte Gestual' ||
+        (p.id === 'design-1' && (p.description?.includes('selectos') || !p.description?.includes('Diseño de símbolos'))) ||
+        (p.id === 'design-2' && (p.description?.includes('Distribución equilibrada') || !p.description?.includes('acompañamiento'))) ||
+        p.id === 'design-3'
+      );
+      if (hasOldData) {
+        localStorage.setItem('macata_designs', JSON.stringify(defaultDesignProjects));
+        return defaultDesignProjects;
+      }
+      return parsed;
+    }
+    return defaultDesignProjects;
+  });
+
+  const [carouselList, setCarouselList] = useState<DesignCarouselItem[]>(() => {
+    const cached = localStorage.getItem('macata_carousel');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        // fall back
+      }
+    }
+    return defaultDesignCarouselItems;
+  });
+
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+
+  // Initialize Cloud Database & Subscribe to real-time changes
+  useEffect(() => {
+    let unsubArt: (() => void) | null = null;
+    let unsubDesign: (() => void) | null = null;
+    let unsubCarousel: (() => void) | null = null;
+
+    async function initCloudSync() {
+      // 1. Seed defaults if cloud Firestore is completely empty
+      await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems);
+
+      // 2. Subscribe to real-time cloud changes for artworks
+      unsubArt = subscribeArtworks((cloudArtworks) => {
+        if (cloudArtworks && cloudArtworks.length > 0) {
+          setArtworksList(cloudArtworks);
+          localStorage.setItem('macata_artworks', JSON.stringify(cloudArtworks));
+        }
+      });
+
+      // 3. Subscribe to real-time cloud changes for design projects
+      unsubDesign = subscribeDesignProjects((cloudDesigns) => {
+        if (cloudDesigns && cloudDesigns.length > 0) {
+          setDesignProjectsList(cloudDesigns);
+          localStorage.setItem('macata_designs', JSON.stringify(cloudDesigns));
+        }
+      });
+
+      // 4. Subscribe to real-time cloud changes for design carousel
+      unsubCarousel = subscribeDesignCarousel((cloudCarousel) => {
+        if (cloudCarousel && cloudCarousel.length > 0) {
+          setCarouselList(cloudCarousel);
+          localStorage.setItem('macata_carousel', JSON.stringify(cloudCarousel));
+        }
+      });
+
+      // 5. Migrate any local items stored in localStorage to cloud if missing
+      const cachedArt = localStorage.getItem('macata_artworks');
+      if (cachedArt) {
+        try {
+          const parsed = JSON.parse(cachedArt) as Artwork[];
+          for (const item of parsed) {
+            if (item.id.startsWith('custom-art-') || item.id.startsWith('art-')) {
+              await saveArtworkToCloud(item);
+            }
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+
+      const cachedDesign = localStorage.getItem('macata_designs');
+      if (cachedDesign) {
+        try {
+          const parsed = JSON.parse(cachedDesign) as DesignProject[];
+          for (const item of parsed) {
+            if (item.id.startsWith('custom-design-') || item.id.startsWith('design-')) {
+              await saveDesignProjectToCloud(item);
+            }
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+
+      const cachedCarousel = localStorage.getItem('macata_carousel');
+      if (cachedCarousel) {
+        try {
+          const parsed = JSON.parse(cachedCarousel) as DesignCarouselItem[];
+          for (const item of parsed) {
+            if (item.id.startsWith('carousel-')) {
+              await saveCarouselItemToCloud(item);
+            }
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+    }
+
+    initCloudSync();
+
+    return () => {
+      if (unsubArt) unsubArt();
+      if (unsubDesign) unsubDesign();
+      if (unsubCarousel) unsubCarousel();
+    };
+  }, []);
+
+  const [activeInquiry, setActiveInquiry] = useState<{
+    artworkTitle: string;
+    size: string;
+    frame: string;
+    type?: 'obra' | 'encargo' | 'branding';
+  } | null>(null);
+
+  // Callback from gallery artwork lightbox to autofill contact form
+  const handleInquire = (artwork: Artwork, config: { size: string; frame: string }) => {
+    setActiveInquiry({
+      artworkTitle: artwork.title,
+      size: config.size,
+      frame: config.frame
+    });
+  };
+
+  // Get the featured artwork image (Vibrant Canvas) for the hero mockup
+  const heroArtwork = artworksList[0] || defaultArtworks[0];
+
+  if (isAdminOpen) {
+    return (
+      <AdminPanel
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        artworks={artworksList}
+        setArtworks={setArtworksList}
+        designProjects={designProjectsList}
+        setDesignProjects={setDesignProjectsList}
+        carouselItems={carouselList}
+        setCarouselItems={setCarouselList}
+        onResetToDefaults={async () => {
+          localStorage.removeItem('macata_artworks');
+          localStorage.removeItem('macata_designs');
+          localStorage.removeItem('macata_carousel');
+          await resetCloudToDefaults(defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems);
+          setArtworksList(defaultArtworks);
+          setDesignProjectsList(defaultDesignProjects);
+          setCarouselList(defaultDesignCarouselItems);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="bg-[#F7F7F5] min-h-screen relative overflow-x-hidden pt-0 selections:bg-[#1A1A1A]/10 selections:text-[#1A1A1A]">
+      
+      {/* Crisp minimal architectural background lines */}
+      <div className="absolute top-0 left-[20vw] w-[1px] h-full bg-[#E5E5E1]/40 -z-10 pointer-events-none"></div>
+      <div className="absolute top-0 left-[80vw] w-[1px] h-full bg-[#E5E5E1]/40 -z-10 pointer-events-none"></div>
+
+      {/* Artist Centered Header in Caslon Antique */}
+      <div className="bg-[#F7F7F5] pt-14 pb-8 text-center px-4">
+        <h1 className="font-caslon text-4xl sm:text-6xl md:text-7xl tracking-[0.25em] text-[#1A1A1A] uppercase select-none">
+          Macata Chavalli
+        </h1>
+        <div className="w-12 h-[1px] bg-[#1A1A1A]/20 mx-auto mt-4 mb-2"></div>
+        <p className="text-[12px] sm:text-[14px] text-[#71716F] select-none tracking-[0.1em]">
+          *  ⋆  ★  ⋆  *  ✩  *  ⋆ ★  ⋆  *
+        </p>
+        <div className="w-12 h-[1px] bg-[#1A1A1A]/20 mx-auto mt-3"></div>
+      </div>
+
+      {/* Full-width widescreen visual banner of her atelier/texture */}
+      <div className="relative w-full aspect-[16/10] sm:aspect-[21/11] md:aspect-[21/9] lg:aspect-[21/8] xl:aspect-[21/7] overflow-hidden border-y border-[#E5E5E1]">
+        <img
+          src="https://i.imgur.com/nO6ldB1.jpeg"
+          alt="Colección y Texturas Macata Chavalli"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover select-none pointer-events-none scale-[1.01]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-black/5 pointer-events-none" />
+      </div>
+
+      {/* Decorative stars and filete below the image */}
+      <div className="text-center pt-8 pb-2">
+        <p className="text-[12px] sm:text-[14px] text-[#71716F] select-none tracking-[0.1em]">
+          *  ⋆  ★  ⋆  *  ✩  *  ⋆ ★  ⋆  *
+        </p>
+        <div className="w-12 h-[1px] bg-[#1A1A1A]/20 mx-auto mt-3"></div>
+      </div>
+
+      {/* Floating Header sits overlaying the banner image */}
+      <Header />
+
+
+
+      {/* Gallery Section */}
+      <Gallery onInquire={handleInquire} artworksList={artworksList} />
+
+      {/* Branding & Design Section */}
+      <section id="branding" className="py-24 px-6 max-w-7xl mx-auto border-t border-[#E5E5E1]">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-light tracking-[0.2em] uppercase text-[#1A1A1A]" style={{ fontFamily: 'Georgia, serif' }}>
+            Branding & Diseño
+          </h2>
+          <div className="w-16 h-[1px] bg-[#1A1A1A] mx-auto mt-6"></div>
+        </div>
+
+        {/* Branding Projects Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+          {designProjectsList.map((project) => (
+            <div key={project.id} className="bg-white p-8 border border-[#E5E5E1] flex flex-col justify-between">
+              <div>
+                <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#71716F] block mb-4">
+                  {project.num}
+                </span>
+                <h3 className="text-xl font-light text-[#1A1A1A] mb-4" style={{ fontFamily: 'Georgia, serif' }}>
+                  {project.title}
+                </h3>
+                <p className="text-xs text-[#71716F] leading-relaxed mb-6 font-sans">
+                  {project.description}
+                </p>
+              </div>
+
+            </div>
+          ))}
+          {designProjectsList.length === 0 && (
+            <div className="col-span-1 md:col-span-2 py-12 text-center text-stone-400 font-mono text-[10px] uppercase tracking-widest border border-dashed border-[#E5E5E1]">
+              No hay proyectos de diseño publicados por el momento.
+            </div>
+          )}
+        </div>
+
+        {/* Carousel for Design Portfolio Work */}
+        <DesignCarousel items={carouselList} />
+      </section>
+
+      {/* Biography Section */}
+      <BioSection />
+
+      {/* Contact Form Section */}
+      <ContactForm inquiry={activeInquiry} />
+
+      {/* Universal Footer */}
+      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+
+    </div>
+  );
+}
+
