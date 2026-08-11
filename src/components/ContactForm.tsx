@@ -277,8 +277,7 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="María López"
-                  className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-[#A1A19F]"
+                  className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all"
                 />
               </div>
 
@@ -292,8 +291,7 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="maria@ejemplo.com"
-                  className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-[#A1A19F]"
+                  className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all"
                 />
               </div>
             </div>
@@ -308,8 +306,7 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                 required
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Escribe el asunto..."
-                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-stone-400 placeholder-[#71716F]/60"
+                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all"
               />
             </div>
 
@@ -323,8 +320,7 @@ export default function ContactForm({ inquiry }: ContactFormProps) {
                 required
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Escribe el mensaje..."
-                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all placeholder-stone-400 placeholder-[#71716F]/60 resize-none"
+                className="w-full font-sans bg-[#F7F7F5] text-[#1A1A1A] border border-[#E5E5E1] focus:border-[#1A1A1A] rounded-none px-4 py-3 text-sm outline-none transition-all resize-none"
               />
             </div>
 

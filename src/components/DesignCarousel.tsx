@@ -58,7 +58,7 @@ export default function DesignCarousel({ items }: DesignCarouselProps) {
               type="button"
               onClick={handlePrev}
               aria-label="Anterior"
-              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/40 hover:bg-black/80 text-white backdrop-blur-sm border border-white/10 flex items-center justify-center cursor-pointer z-10"
+              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-black/40 hover:bg-black/80 text-white backdrop-blur-sm border border-white/10 flex items-center justify-center cursor-pointer z-10"
             >
               <ChevronLeft size={24} />
             </button>
@@ -66,7 +66,7 @@ export default function DesignCarousel({ items }: DesignCarouselProps) {
               type="button"
               onClick={handleNext}
               aria-label="Siguiente"
-              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/40 hover:bg-black/80 text-white backdrop-blur-sm border border-white/10 flex items-center justify-center cursor-pointer z-10"
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-black/40 hover:bg-black/80 text-white backdrop-blur-sm border border-white/10 flex items-center justify-center cursor-pointer z-10"
             >
               <ChevronRight size={24} />
             </button>
@@ -75,7 +75,7 @@ export default function DesignCarousel({ items }: DesignCarouselProps) {
 
         {/* Bottom Minimalist Indicators / Dots */}
         {total > 1 && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-10 bg-black/30 backdrop-blur-md px-4 py-2 border border-white/10">
+          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 z-10 bg-black/30 backdrop-blur-md px-4 py-2 border border-white/10">
             {items.map((item, idx) => (
               <button
                 key={item.id || idx}
@@ -84,7 +84,7 @@ export default function DesignCarousel({ items }: DesignCarouselProps) {
                   e.stopPropagation();
                   setCurrentIndex(idx);
                 }}
-                className={`${
+                className={`transition-all ${
                   idx === currentIndex
                     ? 'w-8 h-1.5 bg-white'
                     : 'w-2 h-1.5 bg-white/40 hover:bg-white/70'
