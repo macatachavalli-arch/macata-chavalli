@@ -15,7 +15,7 @@ interface GalleryProps {
 }
 
 export default function Gallery({ onInquire, artworksList }: GalleryProps) {
-  const [selectedCategory, setSelectedCategory] = useState('todos');
+  const [selectedCategory, setSelectedCategory] = useState<string>(collections[0]?.id || 'laminas');
   const [activeArtwork, setActiveArtwork] = useState<Artwork | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   
@@ -25,9 +25,13 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
 
   const currentArtworks = artworksList || defaultArtworks;
 
-  const filteredArtworks = selectedCategory === 'todos'
-    ? currentArtworks
-    : currentArtworks.filter(art => art.collection === selectedCategory);
+  const filteredArtworks = currentArtworks.filter(art => {
+    if (selectedCategory === 'todas') return true;
+    if (selectedCategory === 'calendario') {
+      return art.collection === 'calendario' || art.collection === 'calendario-2027';
+    }
+    return art.collection === selectedCategory;
+  });
 
   const openLightbox = (art: Artwork) => {
     setActiveArtwork(art);
@@ -88,21 +92,23 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
       </div>
 
       {/* Filter Categories */}
-      <div className="flex flex-wrap justify-center gap-6 mb-8 border-b border-[#E5E5E1] pb-4">
-        {collections.map((col) => (
-          <button
-            key={col.id}
-            id={`btn-filter-${col.id}`}
-            onClick={() => setSelectedCategory(col.id)}
-            className={`pb-2.5 text-xs transition-all duration-300 font-sans uppercase tracking-[0.15em] font-medium ${
-              selectedCategory === col.id
-                ? 'text-[#1A1A1A] border-b-2 border-[#1A1A1A] font-bold'
-                : 'text-[#71716F] hover:text-[#1A1A1A]'
-            }`}
-          >
-            {col.name}
-          </button>
-        ))}
+      <div className="flex flex-wrap justify-center gap-6 sm:gap-8 mb-8 border-b border-[#E5E5E1] pb-4">
+        {collections.map((col) => {
+          return (
+            <button
+              key={col.id}
+              id={`btn-filter-${col.id}`}
+              onClick={() => setSelectedCategory(col.id)}
+              className={`pb-2.5 text-xs transition-all duration-300 font-sans uppercase tracking-[0.15em] font-medium ${
+                selectedCategory === col.id
+                  ? 'text-[#1A1A1A] border-b-2 border-[#1A1A1A] font-bold'
+                  : 'text-[#71716F] hover:text-[#1A1A1A]'
+              }`}
+            >
+              <span>{col.name}</span>
+            </button>
+          );
+        })}
       </div>
 
 
@@ -135,7 +141,7 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-widest text-[#71716F] mb-1.5">
-                  {art.year} • {art.medium.split(' sobre ')[0]}
+                  {art.year} • {(art.medium || '').split(' sobre ')[0]}
                 </p>
                 <h3 className="text-lg font-light text-[#1A1A1A] tracking-wide transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
                   {art.title}
@@ -150,6 +156,18 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
             </div>
           </motion.div>
         ))}
+
+        {filteredArtworks.length === 0 && (
+          <div className="col-span-full py-16 text-center text-[#71716F]">
+            <p className="font-serif italic text-base text-stone-500 mb-3">No hay obras en esta categoría actualmente.</p>
+            <button
+              onClick={() => setSelectedCategory(collections[0]?.id || 'laminas')}
+              className="text-xs font-mono uppercase tracking-widest text-[#1A1A1A] underline underline-offset-4 hover:text-stone-600"
+            >
+              Ver {collections[0]?.name || 'otras colecciones'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Art Details Lightbox Overlay */}
@@ -161,43 +179,41 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.98, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="bg-[#F7F7F5] text-[#1A1A1A] rounded-none overflow-hidden max-w-4xl w-full relative border border-[#E5E5E1]"
+              className="bg-[#F7F7F5] text-[#1A1A1A] rounded-none overflow-hidden max-w-5xl lg:max-w-6xl w-full relative border border-[#E5E5E1] shadow-2xl my-auto"
             >
               <button
                 id="close-lightbox"
-                className="absolute top-5 right-5 z-10 p-2.5 rounded-none bg-white text-[#1A1A1A] hover:bg-neutral-100 transition-colors border border-[#E5E5E1]"
+                className="absolute top-4 right-4 z-20 p-2.5 rounded-none bg-white text-[#1A1A1A] hover:bg-neutral-100 transition-colors border border-[#E5E5E1] shadow-md"
                 onClick={closeLightbox}
+                aria-label="Cerrar modal"
               >
                 <X size={16} />
               </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-12">
-                {/* Visualizer Frame simulation preview */}
-                <div className="md:col-span-6 bg-[#EAEAE8] p-8 flex flex-col items-center justify-center min-h-[350px] md:min-h-[500px] border-r border-[#E5E5E1]">
-                  {/* Artwork canvas container */}
-                  <div className="w-full max-w-[280px] sm:max-w-[320px] transition-all duration-300">
-                    <div className={`transition-all duration-300 relative bg-white ${getFrameStyle()}`}>
-                      <img
-                        src={(activeArtwork.imageUrls && activeArtwork.imageUrls.length > 0) ? activeArtwork.imageUrls[activeImageIdx] : activeArtwork.imageUrl}
-                        alt="Preview de enmarcado"
-                        referrerPolicy="no-referrer"
-                        className="w-full object-cover aspect-[4/3] block"
-                      />
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 min-h-[480px] md:min-h-[620px]">
+                {/* Visualizer: Artwork preview occupying the entire left section */}
+                <div className="md:col-span-7 bg-[#1A1A1A] relative flex flex-col justify-center items-center overflow-hidden min-h-[380px] sm:min-h-[480px] md:min-h-[620px] border-b md:border-b-0 md:border-r border-[#E5E5E1]">
+                  <div className="w-full h-full relative flex items-center justify-center">
+                    <img
+                      src={(activeArtwork.imageUrls && activeArtwork.imageUrls.length > 0) ? activeArtwork.imageUrls[activeImageIdx] : activeArtwork.imageUrl}
+                      alt={activeArtwork.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover min-h-[380px] sm:min-h-[480px] md:min-h-[620px] block"
+                    />
                   </div>
 
                   {/* Multiple perspectives indicators/thumbnails */}
                   {activeArtwork.imageUrls && activeArtwork.imageUrls.length > 1 && (
-                    <div className="mt-4 flex gap-2 justify-center">
+                    <div className="absolute bottom-4 left-0 right-0 flex gap-2 justify-center z-10 px-4 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-6 pb-2">
                       {activeArtwork.imageUrls.map((img, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => setActiveImageIdx(idx)}
-                          className={`w-12 h-12 bg-white border shrink-0 overflow-hidden transition-all duration-200 ${
+                          className={`w-12 h-12 bg-white border-2 shrink-0 overflow-hidden shadow-md transition-all duration-200 ${
                             activeImageIdx === idx
-                              ? 'border-stone-900 ring-1 ring-stone-900 scale-105'
-                              : 'border-stone-300 opacity-60 hover:opacity-100'
+                              ? 'border-white ring-2 ring-[#1A1A1A] scale-105'
+                              : 'border-white/70 opacity-75 hover:opacity-100'
                           }`}
                         >
                           <img
@@ -210,72 +226,13 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
                       ))}
                     </div>
                   )}
-
-                  {/* Configurator buttons */}
-                  {activeArtwork.collection !== 'originales' && activeArtwork.collection !== 'laminas' && (
-                    <div className="mt-8 w-full max-w-[320px]">
-                      <p className="text-[10px] uppercase tracking-widest text-[#71716F] text-center mb-3">
-                        Estilos de Enmarcado:
-                      </p>
-                      <div className="grid grid-cols-4 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFrame('none')}
-                          className={`py-2 text-[9px] uppercase tracking-widest font-sans rounded-none border transition-all ${
-                            selectedFrame === 'none'
-                              ? 'bg-[#1A1A1A] text-white border-transparent'
-                              : 'bg-white text-[#71716F] border-[#E5E5E1] hover:bg-[#F7F7F5]'
-                          }`}
-                        >
-                          Naked
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFrame('wood')}
-                          className={`py-2 text-[9px] uppercase tracking-widest font-sans rounded-none border transition-all ${
-                            selectedFrame === 'wood'
-                              ? 'bg-[#8F6A3C] text-white border-transparent'
-                              : 'bg-white text-[#71716F] border-[#E5E5E1] hover:bg-[#F7F7F5]'
-                          }`}
-                        >
-                          Roble
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFrame('black')}
-                          className={`py-2 text-[9px] uppercase tracking-widest font-sans rounded-none border transition-all ${
-                            selectedFrame === 'black'
-                              ? 'bg-neutral-900 text-white border-transparent'
-                              : 'bg-white text-[#71716F] border-[#E5E5E1] hover:bg-[#F7F7F5]'
-                          }`}
-                        >
-                          Negro
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedFrame('gold')}
-                          className={`py-2 text-[9px] uppercase tracking-widest font-sans rounded-none border transition-all ${
-                            selectedFrame === 'gold'
-                              ? 'bg-[#C5A059] text-white border-transparent'
-                              : 'bg-white text-[#71716F] border-[#E5E5E1] hover:bg-[#F7F7F5]'
-                          }`}
-                        >
-                          Dorado
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Description details and CTA */}
-                <div className="md:col-span-6 p-8 sm:p-10 flex flex-col justify-between">
+                <div className="md:col-span-5 p-8 sm:p-10 flex flex-col justify-between bg-white">
                   <div>
                     <span className="text-[10px] uppercase tracking-[0.2em] text-[#71716F] font-bold italic block mb-1">
-                      {activeArtwork.collection === 'originales'
-                        ? 'ORIGINALES'
-                        : activeArtwork.collection === 'laminas'
-                        ? 'LÁMINAS'
-                        : `Colección ${collections.find(col => col.id === activeArtwork.collection)?.name || activeArtwork.collection}`}
+                      {collections.find(col => col.id === activeArtwork.collection)?.name || activeArtwork.collection.toUpperCase()}
                     </span>
                     <h3 className="text-2xl sm:text-3xl font-light tracking-wide text-[#1A1A1A] mt-1 mb-4" style={{ fontFamily: 'Georgia, serif' }}>
                       {activeArtwork.title}

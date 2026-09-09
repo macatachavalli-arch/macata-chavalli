@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ArrowDown, ArrowUpRight } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, X, Globe } from 'lucide-react';
 import Header from './components/Header';
 import Gallery from './components/Gallery';
 import BioSection from './components/BioSection';
@@ -14,7 +14,6 @@ import Footer from './components/Footer';
 import { artworks as defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems } from './data';
 import { Artwork, DesignProject, DesignCarouselItem } from './types';
 import AdminPanel from './components/AdminPanel';
-import DesignCarousel from './components/DesignCarousel';
 import { 
   subscribeArtworks, 
   subscribeDesignProjects, 
@@ -48,25 +47,19 @@ export default function App() {
   const [designProjectsList, setDesignProjectsList] = useState<DesignProject[]>(() => {
     const cached = localStorage.getItem('macata_designs');
     if (cached) {
-      const parsed = JSON.parse(cached);
-      const hasOldData = parsed.some((p: any) => 
-        p.num === '01 / ID SÓLIDAS' || 
-        p.num === '02 / ENVASES TÁCTILES' || 
-        p.num === '03 / LIBROS & CATÁLOGOS' ||
-        p.title === 'Sistemas de Identidad' ||
-        p.title === 'Arte Gestual' ||
-        (p.id === 'design-1' && (p.description?.includes('selectos') || !p.description?.includes('Diseño de símbolos'))) ||
-        (p.id === 'design-2' && (p.description?.includes('Distribución equilibrada') || !p.description?.includes('acompañamiento'))) ||
-        p.id === 'design-3'
-      );
-      if (hasOldData) {
-        localStorage.setItem('macata_designs', JSON.stringify(defaultDesignProjects));
-        return defaultDesignProjects;
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        // Fallback to default
       }
-      return parsed;
     }
     return defaultDesignProjects;
   });
+
+  const [activeDesignModal, setActiveDesignModal] = useState<DesignProject | null>(null);
 
   const [carouselList, setCarouselList] = useState<DesignCarouselItem[]>(() => {
     const cached = localStorage.getItem('macata_carousel');
@@ -90,7 +83,7 @@ export default function App() {
     let unsubCarousel: (() => void) | null = null;
 
     async function initCloudSync() {
-      // 1. Seed defaults if cloud Firestore is completely empty
+      // 1. Seed defaults only if cloud Firestore is completely empty
       await seedDefaultsIfEmpty(defaultArtworks, defaultDesignProjects, defaultDesignCarouselItems);
 
       // 2. Subscribe to real-time cloud changes for artworks
@@ -101,7 +94,7 @@ export default function App() {
         }
       });
 
-      // 3. Subscribe to real-time cloud changes for design projects
+      // 3. Subscribe to real-time cloud changes for design projects (read-only in listener, no recursive writes)
       unsubDesign = subscribeDesignProjects((cloudDesigns) => {
         if (cloudDesigns && cloudDesigns.length > 0) {
           setDesignProjectsList(cloudDesigns);
@@ -116,49 +109,6 @@ export default function App() {
           localStorage.setItem('macata_carousel', JSON.stringify(cloudCarousel));
         }
       });
-
-      // 5. Migrate any local items stored in localStorage to cloud if missing
-      const cachedArt = localStorage.getItem('macata_artworks');
-      if (cachedArt) {
-        try {
-          const parsed = JSON.parse(cachedArt) as Artwork[];
-          for (const item of parsed) {
-            if (item.id.startsWith('custom-art-') || item.id.startsWith('art-')) {
-              await saveArtworkToCloud(item);
-            }
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
-      }
-
-      const cachedDesign = localStorage.getItem('macata_designs');
-      if (cachedDesign) {
-        try {
-          const parsed = JSON.parse(cachedDesign) as DesignProject[];
-          for (const item of parsed) {
-            if (item.id.startsWith('custom-design-') || item.id.startsWith('design-')) {
-              await saveDesignProjectToCloud(item);
-            }
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
-      }
-
-      const cachedCarousel = localStorage.getItem('macata_carousel');
-      if (cachedCarousel) {
-        try {
-          const parsed = JSON.parse(cachedCarousel) as DesignCarouselItem[];
-          for (const item of parsed) {
-            if (item.id.startsWith('carousel-')) {
-              await saveCarouselItemToCloud(item);
-            }
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
-      }
     }
 
     initCloudSync();
@@ -268,34 +218,142 @@ export default function App() {
           <div className="w-16 h-[1px] bg-[#1A1A1A] mx-auto mt-6"></div>
         </div>
 
-        {/* Branding Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+        {/* Branding Projects Grid: Tarjetas con foto y pie de foto */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {designProjectsList.map((project) => (
-            <div key={project.id} className="bg-white p-8 border border-[#E5E5E1] flex flex-col justify-between">
-              <div>
-                <span className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#71716F] block mb-4">
-                  {project.num}
-                </span>
-                <h3 className="text-xl font-light text-[#1A1A1A] mb-4" style={{ fontFamily: 'Georgia, serif' }}>
-                  {project.title}
-                </h3>
-                <p className="text-xs text-[#71716F] leading-relaxed mb-6 font-sans">
-                  {project.description}
-                </p>
-              </div>
+            <div 
+              key={project.id} 
+              className="bg-white border border-[#E5E5E1] flex flex-col justify-between group hover:border-stone-400 transition-all duration-300 shadow-sm overflow-hidden"
+            >
+              {/* Foto de la tarjeta */}
+              {project.imageUrl && (
+                <div 
+                  className="w-full aspect-[16/11] bg-[#F7F7F5] overflow-hidden cursor-pointer relative border-b border-[#E5E5E1]"
+                  onClick={() => setActiveDesignModal(project)}
+                  title="Ampliar imagen"
+                >
+                  <img
+                    src={project.imageUrl}
+                    alt={project.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 select-none"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                </div>
+              )}
 
+              {/* Pie de foto con título y breve texto (opcional) */}
+              <div className="p-6 sm:p-7 flex flex-col justify-between flex-1">
+                <div>
+                  <h3 
+                    className={`text-lg sm:text-xl font-light text-[#1A1A1A] leading-snug ${
+                      project.description && project.description.trim().length > 0 ? 'mb-3' : 'mb-0'
+                    }`} 
+                    style={{ fontFamily: 'Georgia, serif' }}
+                  >
+                    {project.title}
+                  </h3>
+                  {project.description && project.description.trim().length > 0 ? (
+                    <p className="text-xs text-[#71716F] leading-relaxed font-sans">
+                      {project.description}
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* Enlace al sitio web del proyecto si fue configurado */}
+                {project.websiteUrl && project.websiteUrl.trim().length > 0 && (
+                  <div className="mt-5 pt-4 border-t border-[#E5E5E1] flex items-center justify-between">
+                    <a
+                      href={project.websiteUrl.startsWith('http://') || project.websiteUrl.startsWith('https://') 
+                        ? project.websiteUrl 
+                        : `https://${project.websiteUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[#1A1A1A] hover:text-[#71716F] transition-colors group/link"
+                      title={`Visitar sitio web: ${project.websiteUrl}`}
+                    >
+                      <Globe size={13} className="text-stone-600" />
+                      <span className="underline underline-offset-4">Ver sitio web</span>
+                      <ArrowUpRight size={13} className="transition-transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
+
           {designProjectsList.length === 0 && (
-            <div className="col-span-1 md:col-span-2 py-12 text-center text-stone-400 font-mono text-[10px] uppercase tracking-widest border border-dashed border-[#E5E5E1]">
-              No hay proyectos de diseño publicados por el momento.
+            <div className="col-span-full py-16 text-center text-[#71716F] font-mono text-[10px] uppercase tracking-widest border border-dashed border-[#E5E5E1] bg-white">
+              No hay tarjetas de diseño publicadas por el momento.
             </div>
           )}
         </div>
-
-        {/* Carousel for Design Portfolio Work */}
-        <DesignCarousel items={carouselList} />
       </section>
+
+      {/* Design Project Photo Lightbox Modal */}
+      {activeDesignModal && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+          onClick={() => setActiveDesignModal(null)}
+        >
+          <div 
+            className="bg-white max-w-3xl w-full max-h-[90vh] overflow-y-auto flex flex-col border border-[#E5E5E1] shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setActiveDesignModal(null)}
+              className="absolute top-4 right-4 z-10 p-2 bg-white/90 hover:bg-white text-[#1A1A1A] transition-all border border-[#E5E5E1]"
+              title="Cerrar vista previa"
+            >
+              <X size={18} />
+            </button>
+
+            {activeDesignModal.imageUrl && (
+              <div className="w-full max-h-[60vh] bg-stone-100 flex items-center justify-center overflow-hidden border-b border-[#E5E5E1]">
+                <img
+                  src={activeDesignModal.imageUrl}
+                  alt={activeDesignModal.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-auto max-h-[60vh] object-contain"
+                />
+              </div>
+            )}
+
+            <div className="p-6 sm:p-8">
+              <h3 
+                className={`text-2xl font-light text-[#1A1A1A] ${
+                  activeDesignModal.description && activeDesignModal.description.trim().length > 0 ? 'mb-3' : 'mb-0'
+                }`} 
+                style={{ fontFamily: 'Georgia, serif' }}
+              >
+                {activeDesignModal.title}
+              </h3>
+              {activeDesignModal.description && activeDesignModal.description.trim().length > 0 ? (
+                <p className="text-sm text-[#71716F] leading-relaxed font-sans">
+                  {activeDesignModal.description}
+                </p>
+              ) : null}
+
+              {activeDesignModal.websiteUrl && activeDesignModal.websiteUrl.trim().length > 0 && (
+                <div className="mt-6 pt-4 border-t border-[#E5E5E1] flex items-center">
+                  <a
+                    href={activeDesignModal.websiteUrl.startsWith('http://') || activeDesignModal.websiteUrl.startsWith('https://') 
+                      ? activeDesignModal.websiteUrl 
+                      : `https://${activeDesignModal.websiteUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[#1A1A1A] hover:text-stone-600 transition-colors underline underline-offset-4 group/modalLink"
+                  >
+                    <Globe size={14} />
+                    <span>Visitar sitio web del proyecto</span>
+                    <ArrowUpRight size={14} className="transition-transform group-hover/modalLink:translate-x-0.5 group-hover/modalLink:-translate-y-0.5" />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Biography Section */}
       <BioSection />

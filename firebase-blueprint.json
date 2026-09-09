@@ -3,6 +3,7 @@
     "artwork": {
       "title": "Artwork",
       "description": "Artworks gallery catalog",
+      "type": "object",
       "properties": {
         "title": { "type": "string" },
         "collection": { "type": "string" },
@@ -10,7 +11,7 @@
         "medium": { "type": "string" },
         "size": { "type": "string" },
         "imageUrl": { "type": "string" },
-        "imageUrls": { "type": "array", "items": { "type": "string" } },
+        "imageUrls": { "type": "array" },
         "description": { "type": "string" },
         "featured": { "type": "boolean" }
       }
@@ -18,13 +19,40 @@
     "designProject": {
       "title": "Design Project",
       "description": "Design and branding projects",
+      "type": "object",
       "properties": {
         "num": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
         "badgeLeft": { "type": "string" },
         "badgeRight": { "type": "string" }
       }
+    },
+    "designCarouselItem": {
+      "title": "Design Carousel Item",
+      "description": "Images for design carousel",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "order": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/artworks/{artworkId}": {
+      "schema": "artwork",
+      "description": "Public catalog of artworks"
+    },
+    "/designProjects/{projectId}": {
+      "schema": "designProject",
+      "description": "Branding & Design projects"
+    },
+    "/designCarousel/{carouselId}": {
+      "schema": "designCarouselItem",
+      "description": "Design carousel images"
     }
   }
 }

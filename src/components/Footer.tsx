@@ -26,11 +26,14 @@ export default function Footer({ onOpenAdmin }: FooterProps) {
               <>
                 <span className="text-neutral-700 hidden sm:inline">|</span>
                 <button
+                  type="button"
                   onClick={onOpenAdmin}
                   id="btn-footer-admin-access"
-                  className="text-[#71716F] hover:text-white transition-colors flex items-center gap-1 uppercase font-mono text-[9px] tracking-wider focus:outline-none"
+                  title="Administración"
+                  aria-label="Administración"
+                  className="text-[#71716F] hover:text-white transition-colors flex items-center justify-center p-1 focus:outline-none cursor-pointer"
                 >
-                  <Lock size={10} /> ADMIN
+                  <Lock size={12} />
                 </button>
               </>
             )}

@@ -7,11 +7,6 @@ import { Artwork, Collection, DesignProject, DesignCarouselItem } from './types'
 
 export const collections: Collection[] = [
   {
-    id: 'todos',
-    name: 'VER TODO',
-    description: 'La colección completa de exploraciones visuales.'
-  },
-  {
     id: 'laminas',
     name: 'LÁMINAS',
     description: 'Reproducciones impresas de alta calidad (giclée) en papeles selectos de alto gramaje.'
@@ -23,7 +18,7 @@ export const collections: Collection[] = [
   },
   {
     id: 'calendario',
-    name: 'CALENDARIO',
+    name: 'CALENDARIO 2027',
     description: 'Calendarios ilustrados de edición limitada e impresión artesanal.'
   }
 ];
@@ -90,10 +85,10 @@ export const artworks: Artwork[] = [
     featured: false
   },
   {
-    id: 'almanac-2026',
-    title: 'Calendario Ilustrado 2026',
+    id: 'almanac-2027',
+    title: 'Calendario Ilustrado 2027',
     collection: 'calendario',
-    year: '2026',
+    year: '2027',
     medium: 'Impresión artesanal sobre papel texturado de 240g con pie de madera rústica',
     size: '15 x 21 cm',
     imageUrl: '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
@@ -114,7 +109,7 @@ export const artistProfile = {
   bioParagraphs: [
     'Me llamo Clara, nací en la ciudad de La Plata, Buenos Aires, Argentina. Soy Diseñadora en Comunicación Visual egresada de la Facultad de Artes, Universidad Nacional de La Plata.',
     'Con título en mano me perfeccioné en diseño editorial. En el estudio se diseñaban interior y tapa de libros, colecciones y manuales para grandes editoriales. También realizábamos calendarios y agendas. Al día de hoy, el mundo editorial es una de mis propuestas preferidas para diseñar.',
-    'Luego adquirí experiencia en el área de preimpresión en una gráfica de mi ciudad natal. Una de las tareas que más me gustaba hacer era la preparación y supervisión de archivos y originales antes de entrar en máquina.',
+    'Luego adquirí experiencia en el área de preimpresión en una gráfica de mi ciudad natal. Las tareas que más disfrutaba hacer eran la preparación y supervisión de archivos y originales antes de entrar en máquina.',
     'En lo que va de mi vida, siempre me acompañan los dibujos. Exploro el arte desde muy pequeña. A través de las ilustraciones plasmo sueños, pensamientos. Creo historias y mundos imaginarios que me gustaría conocer, invitando al espectador a sumergirse en ellos.',
     'Me siento muy afortunada de poder expresar en dibujos, comunicar a través de la ilustración. Me inspira profundamente el sentido de transformación, la transmutación, la conexión con lo divino. Lo oculto que se deja ver. Las magias. La Luna y el Sol.'
   ],
@@ -128,9 +123,10 @@ export const artistProfile = {
 export const defaultDesignProjects: DesignProject[] = [
   {
     id: 'design-1',
-    num: '01 / BRANDING & DISEÑO',
+    num: '01 / BRANDING & IDENTIDAD',
     title: 'Identidad Visual',
     description: 'Diseño de logotipos y sistema de identidad visual. Trabajo para darle forma a tus ideas y a tu proyecto inicial. Diseño de símbolos para acompañar tu proyecto de identidad visual.',
+    imageUrl: 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?auto=format&fit=crop&w=1200&q=80',
     badgeLeft: 'Tipografía & Logotipo',
     badgeRight: '★ Boutique'
   },
@@ -139,8 +135,18 @@ export const defaultDesignProjects: DesignProject[] = [
     num: '02 / EDITORIAL',
     title: 'Diseño Editorial',
     description: 'Diseño de libros, catálogos, colecciones, calendarios y agendas. Arte de tapa y maquetado interior. Consultoría y acompañamiento para tu proyecto editorial autogestivo.',
+    imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1200&q=80',
     badgeLeft: 'Libros & Agendas',
     badgeRight: '★ Especializado'
+  },
+  {
+    id: 'design-3',
+    num: '03 / PAPELERÍA & SÍMBOLOS',
+    title: 'Papelería & Universo Gráfico',
+    description: 'Desarrollo de piezas gráficas personalizadas, estampas botánicas y aplicaciones artesanales para dar vida a proyectos creativos.',
+    imageUrl: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=1200&q=80',
+    badgeLeft: 'Estampas & Papel',
+    badgeRight: '★ Artesanal'
   }
 ];
 

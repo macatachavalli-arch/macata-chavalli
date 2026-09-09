@@ -1,10 +1,44 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Macata Chavalli - Art Portfolio</title>
+    <meta name="description" content="Sitio web oficial de la artista visual Macata Chavalli. Galería de arte contemporáneo, biografía, enlaces a redes sociales y formulario de contacto." />
+    <meta property="og:title" content="Macata Chavalli - Art Portfolio" />
+    <meta property="og:description" content="Sitio web oficial de la artista visual Macata Chavalli. Galería de arte contemporáneo, biografía, enlaces a redes sociales y formulario de contacto." />
     <link rel="icon" type="image/jpeg" href="https://i.imgur.com/mSQx9T3.jpeg" />
-    <title>Macata Chavalli</title>
+    <script>
+      // Suppress benign third-party browser extension errors (e.g. MetaMask injected provider in sandboxed iframes)
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event && (event.reason || event);
+        var msg = (reason && (reason.message || reason.stack || String(reason))) || '';
+        if (
+          msg.includes('MetaMask') ||
+          msg.includes('metamask') ||
+          msg.includes('ethereum') ||
+          msg.includes('chrome-extension://') ||
+          msg.includes('moz-extension://')
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+      window.addEventListener('error', function (event) {
+        var msg = (event && (event.message || (event.error && event.error.message))) || '';
+        var filename = (event && event.filename) || '';
+        if (
+          msg.includes('MetaMask') ||
+          msg.includes('metamask') ||
+          msg.includes('ethereum') ||
+          filename.includes('chrome-extension://') ||
+          filename.includes('moz-extension://')
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

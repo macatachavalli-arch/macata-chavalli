@@ -14,6 +14,7 @@ export interface Artwork {
   imageUrls?: string[];
   description: string;
   featured: boolean;
+  updatedAt?: number;
 }
 
 export interface Collection {
@@ -26,9 +27,12 @@ export interface DesignProject {
   id: string;
   num: string;
   title: string;
-  description: string;
+  description?: string;
+  imageUrl?: string;
   badgeLeft: string;
   badgeRight: string;
+  websiteUrl?: string;
+  updatedAt?: number;
 }
 
 export interface DesignCarouselItem {
@@ -37,6 +41,7 @@ export interface DesignCarouselItem {
   title?: string;
   category?: string;
   order?: number;
+  updatedAt?: number;
 }
 
 export interface InquiryMessage {
