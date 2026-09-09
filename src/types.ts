@@ -14,8 +14,28 @@ export interface Artwork {
   imageUrls?: string[];
   description: string;
   featured: boolean;
+  priceA4?: string;
+  priceA3?: string;
+  priceCanva?: string;
+  priceCanvas20x30?: string;
+  priceCanvas40x60?: string;
+  price?: string;
   updatedAt?: number;
 }
+
+export interface LaminasPricing {
+  a4: string;
+  a3: string;
+  canva20x30: string;
+  canva40x60: string;
+}
+
+export const DEFAULT_LAMINAS_PRICES: LaminasPricing = {
+  a4: '18.000',
+  a3: '28.000',
+  canva20x30: '45.000',
+  canva40x60: '65.000'
+};
 
 export interface Collection {
   id: string;

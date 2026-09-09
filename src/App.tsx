@@ -128,10 +128,10 @@ export default function App() {
   } | null>(null);
 
   // Callback from gallery artwork lightbox to autofill contact form
-  const handleInquire = (artwork: Artwork, config: { size: string; frame: string }) => {
+  const handleInquire = (artwork: Artwork, config: { size: string; frame: string; price?: string }) => {
     setActiveInquiry({
       artworkTitle: artwork.title,
-      size: config.size,
+      size: config.price ? `${config.size} • $${config.price} ARS` : config.size,
       frame: config.frame
     });
   };
@@ -207,7 +207,7 @@ export default function App() {
 
 
       {/* Gallery Section */}
-      <Gallery onInquire={handleInquire} artworksList={artworksList} />
+      <Gallery onInquire={handleInquire} artworksList={artworksList} setArtworksList={setArtworksList} />
 
       {/* Branding & Design Section */}
       <section id="branding" className="py-24 px-6 max-w-7xl mx-auto border-t border-[#E5E5E1]">

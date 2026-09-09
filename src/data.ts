@@ -31,14 +31,14 @@ export const artworks: Artwork[] = [
     year: '2026',
     medium: 'Acrílico sobre lienzo con relieve y detalles en pan de oro',
     size: '100 x 100 cm',
-    imageUrl: '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
+    imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
     imageUrls: [
-      '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
       'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80'
     ],
     description: 'Una pieza vibrante capitaneada por pétalos abstractos amarillos, corales exuberantes y trazos de espátula texturizados que transmiten optimismo. Los destellos de pan de oro capturan la luz cambiante del día.',
-    featured: true
+    featured: true,
+    price: '280.000'
   },
   {
     id: 'botanical-dream',
@@ -47,13 +47,16 @@ export const artworks: Artwork[] = [
     year: '2025',
     medium: 'Gouache, collage y técnica mixta sobre papel de algodón de 300g',
     size: '70 x 100 cm',
-    imageUrl: '/src/assets/images/artwork_botanical_dream_1781006353460.png',
+    imageUrl: 'https://images.unsplash.com/photo-1533158326339-7f3cf2404354?auto=format&fit=crop&w=800&q=80',
     imageUrls: [
-      '/src/assets/images/artwork_botanical_dream_1781006353460.png',
       'https://images.unsplash.com/photo-1533158326339-7f3cf2404354?auto=format&fit=crop&w=800&q=80'
     ],
     description: 'Una atmósfera mágica y contemplativa, representando el reposo rodeado de gigantescas hojas de palmera índigo e hiedras selváticas de fantasía bajo una suave lluvia de estrellas doradas.',
-    featured: true
+    featured: true,
+    priceA4: '18.000',
+    priceA3: '28.000',
+    priceCanvas20x30: '45.000',
+    priceCanvas40x60: '65.000'
   },
   {
     id: 'starry-landscape',
@@ -62,13 +65,13 @@ export const artworks: Artwork[] = [
     year: '2026',
     medium: 'Óleo con empaste grueso sobre madera entelada',
     size: '120 x 80 cm',
-    imageUrl: '/src/assets/images/artwork_starry_landscape_1781006365363.png',
+    imageUrl: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=800&q=80',
     imageUrls: [
-      '/src/assets/images/artwork_starry_landscape_1781006365363.png',
       'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=800&q=80'
     ],
     description: 'Inspirada en el cielo nocturno del campo patagónico, esta pintura de empaste generoso plasma luciérnagas titilantes y un cielo arremolinado en tonos lila, cobalto y plata.',
-    featured: true
+    featured: true,
+    price: '320.000'
   },
   {
     id: 'oceanic-harmony',
@@ -77,12 +80,16 @@ export const artworks: Artwork[] = [
     year: '2026',
     medium: 'Tinta de alcohol y acuarela fluida sobre papel Yupo',
     size: '80 x 60 cm',
-    imageUrl: '/src/assets/images/artwork_oceanic_harmony_1781006380677.png',
+    imageUrl: 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=800&q=80',
     imageUrls: [
-      '/src/assets/images/artwork_oceanic_harmony_1781006380677.png'
+      'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=800&q=80'
     ],
     description: 'Una meditación acuática. Flujos orgánicos que sugieren arrecifes profundos y el constante vaivén de las olas. Predominan los tonos melocotón, turquesa suave y destellos minerales.',
-    featured: false
+    featured: false,
+    priceA4: '18.000',
+    priceA3: '28.000',
+    priceCanvas20x30: '45.000',
+    priceCanvas40x60: '65.000'
   },
   {
     id: 'almanac-2027',
@@ -91,12 +98,13 @@ export const artworks: Artwork[] = [
     year: '2027',
     medium: 'Impresión artesanal sobre papel texturado de 240g con pie de madera rústica',
     size: '15 x 21 cm',
-    imageUrl: '/src/assets/images/artwork_vibrant_canvas_1781006340944.png',
+    imageUrl: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=800&q=80',
     imageUrls: [
-      '/src/assets/images/artwork_vibrant_canvas_1781006340944.png'
+      'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=800&q=80'
     ],
     description: 'Edición boutique con 12 ilustraciones mensuales desmontables para ser enmarcadas como láminas individuales de autor una vez concluido el mes.',
-    featured: false
+    featured: false,
+    price: '35.000'
   }
 ];
 
@@ -105,7 +113,7 @@ export const artistProfile = {
   instagram: 'macatachavalli',
   instagramUrl: 'https://www.instagram.com/macatachavalli?igsh=ajRrbWZsaXdhZjU3',
   email: 'macatachavalli@gmail.com',
-  avatarUrl: '/src/assets/images/artist_avatar_1781006393053.png',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
   bioParagraphs: [
     'Me llamo Clara, nací en la ciudad de La Plata, Buenos Aires, Argentina. Soy Diseñadora en Comunicación Visual egresada de la Facultad de Artes, Universidad Nacional de La Plata.',
     'Con título en mano me perfeccioné en diseño editorial. En el estudio se diseñaban interior y tapa de libros, colecciones y manuales para grandes editoriales. También realizábamos calendarios y agendas. Al día de hoy, el mundo editorial es una de mis propuestas preferidas para diseñar.',

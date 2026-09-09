@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw, Upload, Cloud, Globe, ExternalLink } from 'lucide-react';
-import { Artwork, DesignProject, DesignCarouselItem } from '../types';
+import { X, Lock, Plus, Trash2, Sparkles, LogOut, CheckCircle, RotateCcw, Upload, Cloud, Globe, ExternalLink, Tag } from 'lucide-react';
+import { Artwork, DesignProject, DesignCarouselItem, DEFAULT_LAMINAS_PRICES } from '../types';
 import { collections } from '../data';
 import { 
   saveArtworkToCloud, 
@@ -69,6 +69,69 @@ export default function AdminPanel({
   const [artImgUrl2, setArtImgUrl2] = useState('');
   const [artImgUrl3, setArtImgUrl3] = useState('');
   const [artFeatured, setArtFeatured] = useState(false);
+  
+  // Base default prices for laminas (store-wide)
+  const [basePriceA4, setBasePriceA4] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('macata_prices_laminas');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.a4) return parsed.a4;
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_LAMINAS_PRICES.a4;
+  });
+
+  const [basePriceA3, setBasePriceA3] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('macata_prices_laminas');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.a3) return parsed.a3;
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_LAMINAS_PRICES.a3;
+  });
+
+  const [basePriceCanva20x30, setBasePriceCanva20x30] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('macata_prices_laminas');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.canva20x30) return parsed.canva20x30;
+        if (parsed?.canva) return parsed.canva;
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_LAMINAS_PRICES.canva20x30;
+  });
+
+  const [basePriceCanva40x60, setBasePriceCanva40x60] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('macata_prices_laminas');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.canva40x60) return parsed.canva40x60;
+      }
+    } catch {
+      // fallback
+    }
+    return DEFAULT_LAMINAS_PRICES.canva40x60;
+  });
+
+  const [basePriceSaved, setBasePriceSaved] = useState(false);
+
+  // Prices in Argentine Pesos (ARS) for currently selected artwork
+  const [artPriceA4, setArtPriceA4] = useState(basePriceA4);
+  const [artPriceA3, setArtPriceA3] = useState(basePriceA3);
+  const [artPriceCanva20x30, setArtPriceCanva20x30] = useState(basePriceCanva20x30);
+  const [artPriceCanva40x60, setArtPriceCanva40x60] = useState(basePriceCanva40x60);
+  const [artPrice, setArtPrice] = useState('');
 
   // New & Edit Design Project Form State
   const [editingDesign, setEditingDesign] = useState<DesignProject | null>(null);
@@ -262,6 +325,24 @@ export default function AdminPanel({
     e.target.value = '';
   };
 
+  // Save Store-wide Default Base Prices for Laminas
+  const handleSaveBasePrices = () => {
+    const valA4 = basePriceA4.trim() || DEFAULT_LAMINAS_PRICES.a4;
+    const valA3 = basePriceA3.trim() || DEFAULT_LAMINAS_PRICES.a3;
+    const valCanva20x30 = basePriceCanva20x30.trim() || DEFAULT_LAMINAS_PRICES.canva20x30;
+    const valCanva40x60 = basePriceCanva40x60.trim() || DEFAULT_LAMINAS_PRICES.canva40x60;
+    const newDefaults = { 
+      a4: valA4, 
+      a3: valA3, 
+      canva20x30: valCanva20x30,
+      canva40x60: valCanva40x60,
+      canva: valCanva20x30 // backwards compat
+    };
+    localStorage.setItem('macata_prices_laminas', JSON.stringify(newDefaults));
+    setBasePriceSaved(true);
+    setTimeout(() => setBasePriceSaved(false), 2000);
+  };
+
   // Reset Artwork Form
   const resetArtworkForm = () => {
     setArtTitle('');
@@ -271,9 +352,14 @@ export default function AdminPanel({
     setArtImgUrl1('');
     setArtImgUrl2('');
     setArtImgUrl3('');
-    setArtCol('calendario');
+    setArtCol('laminas');
     setArtYear('2026');
     setArtFeatured(false);
+    setArtPriceA4(basePriceA4);
+    setArtPriceA3(basePriceA3);
+    setArtPriceCanva20x30(basePriceCanva20x30);
+    setArtPriceCanva40x60(basePriceCanva40x60);
+    setArtPrice('');
     setEditingArtwork(null);
   };
 
@@ -287,6 +373,11 @@ export default function AdminPanel({
     setArtSize(art.size);
     setArtCol(art.collection);
     setArtDesc(art.description || '');
+    setArtPriceA4(art.priceA4 || basePriceA4);
+    setArtPriceA3(art.priceA3 || basePriceA3);
+    setArtPriceCanva20x30(art.priceCanvas20x30 || art.priceCanva || basePriceCanva20x30);
+    setArtPriceCanva40x60(art.priceCanvas40x60 || basePriceCanva40x60);
+    setArtPrice(art.price || '');
 
     // Distribute images
     const imgUrls = art.imageUrls && art.imageUrls.length > 0 ? art.imageUrls : [art.imageUrl];
@@ -329,6 +420,12 @@ export default function AdminPanel({
         imageUrls: finalImageUrls,
         description: artDesc.trim(),
         featured: artFeatured,
+        priceA4: artCol === 'laminas' ? (artPriceA4.trim() || undefined) : undefined,
+        priceA3: artCol === 'laminas' ? (artPriceA3.trim() || undefined) : undefined,
+        priceCanva: artCol === 'laminas' ? (artPriceCanva20x30.trim() || undefined) : undefined,
+        priceCanvas20x30: artCol === 'laminas' ? (artPriceCanva20x30.trim() || undefined) : undefined,
+        priceCanvas40x60: artCol === 'laminas' ? (artPriceCanva40x60.trim() || undefined) : undefined,
+        price: artCol !== 'laminas' ? (artPrice.trim() || undefined) : undefined,
         updatedAt: Date.now()
       };
 
@@ -982,6 +1079,101 @@ export default function AdminPanel({
                       </div>
                     </div>
 
+                    {/* Precios en Pesos Argentinos (ARS) */}
+                    {artCol === 'laminas' ? (
+                      <div className="bg-[#F4F4F1] p-3.5 border border-[#E5E5E1] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="font-mono uppercase tracking-wider text-[9px] text-[#1A1A1A] font-bold block">
+                            Precios en Pesos Argentinos (ARS) — Opciones de Lámina y Canvas
+                          </label>
+                          <span className="text-[9px] text-[#71716F] font-mono">ARS ($)</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">
+                              1. Lámina A4 (21 x 29.7 cm)
+                            </label>
+                            <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                              <span className="text-xs text-[#71716F] mr-1">$</span>
+                              <input
+                                type="text"
+                                value={artPriceA4}
+                                onChange={(e) => setArtPriceA4(e.target.value)}
+                                placeholder="18.000"
+                                className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">
+                              2. Lámina A3 (29.7 x 42 cm)
+                            </label>
+                            <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                              <span className="text-xs text-[#71716F] mr-1">$</span>
+                              <input
+                                type="text"
+                                value={artPriceA3}
+                                onChange={(e) => setArtPriceA3(e.target.value)}
+                                placeholder="28.000"
+                                className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">
+                              3. Canvas batidor (20 x 30 cm)
+                            </label>
+                            <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                              <span className="text-xs text-[#71716F] mr-1">$</span>
+                              <input
+                                type="text"
+                                value={artPriceCanva20x30}
+                                onChange={(e) => setArtPriceCanva20x30(e.target.value)}
+                                placeholder="45.000"
+                                className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="font-mono text-[8px] uppercase tracking-wider text-[#71716F] block mb-1">
+                              4. Canvas batidor (40 x 60 cm)
+                            </label>
+                            <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                              <span className="text-xs text-[#71716F] mr-1">$</span>
+                              <input
+                                type="text"
+                                value={artPriceCanva40x60}
+                                onChange={(e) => setArtPriceCanva40x60(e.target.value)}
+                                placeholder="65.000"
+                                className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="font-mono uppercase tracking-wider text-[9px] text-[#71716F] block mb-1">
+                          Precio de la Obra ($ ARS - Opcional)
+                        </label>
+                        <div className="flex items-center bg-[#F7F7F5] border border-[#E5E5E1] px-2.5 py-2 focus-within:border-[#1A1A1A]">
+                          <span className="text-xs text-[#71716F] mr-1.5">$</span>
+                          <input
+                            type="text"
+                            value={artPrice}
+                            onChange={(e) => setArtPrice(e.target.value)}
+                            placeholder="Ej: 280.000"
+                            className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                          />
+                          <span className="text-[10px] font-mono text-[#71716F]">ARS</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="font-mono uppercase tracking-wider text-[9px] text-[#71716F] block mb-1">
                         Descripción o Detalle Poético
@@ -1050,6 +1242,102 @@ export default function AdminPanel({
 
                 {/* Right Column: List of Existing Artworks & Actions */}
                 <div className="lg:col-span-7 space-y-4">
+                  {/* Precios Base de Láminas (Storewide Default Prices in ARS) */}
+                  <div className="bg-[#F4F4F1] p-4 border border-[#E5E5E1] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-[10px] font-mono uppercase tracking-wider font-bold text-[#1A1A1A] flex items-center gap-1.5">
+                        <Tag size={12} />
+                        Gestión de Precios Base para Láminas (ARS)
+                      </h5>
+                      <span className="text-[9px] font-mono text-[#71716F]">Precios de referencia</span>
+                    </div>
+                    <p className="text-[10px] text-[#71716F] font-sans">
+                      Configura aquí los importes en pesos argentinos para las opciones de lámina y canvas (A4, A3, Canvas batidor 20x30 y 40x60 cm). Se aplicarán por defecto a las láminas de la tienda y puedes personalizarlos individualmente por obra.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+                      <div>
+                        <label className="text-[8px] font-mono uppercase tracking-wider text-[#71716F] block mb-1">
+                          1. Lámina A4:
+                        </label>
+                        <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                          <span className="text-xs text-[#71716F] mr-1">$</span>
+                          <input
+                            type="text"
+                            value={basePriceA4}
+                            onChange={(e) => setBasePriceA4(e.target.value)}
+                            placeholder="18.000"
+                            className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                          />
+                          <span className="text-[8px] font-mono text-[#71716F]">ARS</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-mono uppercase tracking-wider text-[#71716F] block mb-1">
+                          2. Lámina A3:
+                        </label>
+                        <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                          <span className="text-xs text-[#71716F] mr-1">$</span>
+                          <input
+                            type="text"
+                            value={basePriceA3}
+                            onChange={(e) => setBasePriceA3(e.target.value)}
+                            placeholder="28.000"
+                            className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                          />
+                          <span className="text-[8px] font-mono text-[#71716F]">ARS</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-mono uppercase tracking-wider text-[#71716F] block mb-1">
+                          3. Canvas (20 x 30):
+                        </label>
+                        <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                          <span className="text-xs text-[#71716F] mr-1">$</span>
+                          <input
+                            type="text"
+                            value={basePriceCanva20x30}
+                            onChange={(e) => setBasePriceCanva20x30(e.target.value)}
+                            placeholder="45.000"
+                            className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                          />
+                          <span className="text-[8px] font-mono text-[#71716F]">ARS</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-mono uppercase tracking-wider text-[#71716F] block mb-1">
+                          4. Canvas (40 x 60):
+                        </label>
+                        <div className="flex items-center bg-white border border-[#E5E5E1] px-2 py-1.5 focus-within:border-[#1A1A1A]">
+                          <span className="text-xs text-[#71716F] mr-1">$</span>
+                          <input
+                            type="text"
+                            value={basePriceCanva40x60}
+                            onChange={(e) => setBasePriceCanva40x60(e.target.value)}
+                            placeholder="65.000"
+                            className="w-full text-xs font-mono bg-transparent outline-none text-[#1A1A1A]"
+                          />
+                          <span className="text-[8px] font-mono text-[#71716F]">ARS</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={handleSaveBasePrices}
+                        className="bg-[#1A1A1A] hover:bg-stone-800 text-white font-mono text-[9px] uppercase tracking-wider px-3.5 py-1.5 font-bold transition-all flex items-center gap-1.5"
+                      >
+                        {basePriceSaved ? (
+                          <>
+                            <CheckCircle size={11} className="text-emerald-400" />
+                            <span>¡Precios Base Guardados!</span>
+                          </>
+                        ) : (
+                          <span>Guardar Precios Base</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
                   <h4 className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#1A1A1A] font-bold border-b border-[#E5E5E1] pb-2">
                     ✦ Obras cargadas ({artworks.length})
                   </h4>
@@ -1083,6 +1371,28 @@ export default function AdminPanel({
                             <p className="text-[10px] font-mono text-stone-500">
                               {art.size} • {art.year} • {art.medium}
                             </p>
+                            {art.collection === 'laminas' ? (
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[9px] font-mono text-stone-600">
+                                <span className="bg-[#F4F4F1] border border-stone-200 px-1.5 py-0.5">
+                                  A4: ${art.priceA4 || basePriceA4} ARS
+                                </span>
+                                <span className="bg-[#F4F4F1] border border-stone-200 px-1.5 py-0.5">
+                                  A3: ${art.priceA3 || basePriceA3} ARS
+                                </span>
+                                <span className="bg-[#F4F4F1] border border-stone-200 px-1.5 py-0.5">
+                                  Canvas 20x30: ${art.priceCanvas20x30 || art.priceCanva || basePriceCanva20x30} ARS
+                                </span>
+                                <span className="bg-[#F4F4F1] border border-stone-200 px-1.5 py-0.5">
+                                  Canvas 40x60: ${art.priceCanvas40x60 || basePriceCanva40x60} ARS
+                                </span>
+                              </div>
+                            ) : art.price ? (
+                              <div className="mt-1.5 text-[9px] font-mono text-stone-600">
+                                <span className="bg-[#F4F4F1] border border-stone-200 px-1.5 py-0.5">
+                                  Precio: ${art.price} ARS
+                                </span>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
 

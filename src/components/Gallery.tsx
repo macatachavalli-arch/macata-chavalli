@@ -7,14 +7,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Maximize2, X, Sparkles, Send, Check } from 'lucide-react';
 import { artworks as defaultArtworks, collections } from '../data';
-import { Artwork } from '../types';
+import { Artwork, DEFAULT_LAMINAS_PRICES, LaminasPricing } from '../types';
 
 interface GalleryProps {
-  onInquire: (artwork: Artwork, config: { size: string; frame: string }) => void;
+  onInquire: (artwork: Artwork, config: { size: string; frame: string; price?: string }) => void;
   artworksList?: Artwork[];
+  setArtworksList?: (artworks: Artwork[]) => void;
 }
 
-export default function Gallery({ onInquire, artworksList }: GalleryProps) {
+export default function Gallery({ onInquire, artworksList, setArtworksList }: GalleryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>(collections[0]?.id || 'laminas');
   const [activeArtwork, setActiveArtwork] = useState<Artwork | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
@@ -32,6 +33,40 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
     }
     return art.collection === selectedCategory;
   });
+
+  // Calculate current laminate prices based on artwork values or saved defaults
+  const getLaminasPrices = (art: Artwork | null): LaminasPricing => {
+    let defaults: LaminasPricing = DEFAULT_LAMINAS_PRICES;
+    try {
+      const raw = localStorage.getItem('macata_prices_laminas');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed) defaults = { ...DEFAULT_LAMINAS_PRICES, ...parsed };
+      }
+    } catch {
+      // fallback to defaults
+    }
+
+    return {
+      a4: art?.priceA4 || defaults.a4,
+      a3: art?.priceA3 || defaults.a3,
+      canva20x30: art?.priceCanvas20x30 || art?.priceCanva || defaults.canva20x30,
+      canva40x60: art?.priceCanvas40x60 || defaults.canva40x60
+    };
+  };
+
+  const currentPrices = getLaminasPrices(activeArtwork);
+
+  const getActiveSelectedPrice = (): string => {
+    if (!activeArtwork) return '';
+    if (activeArtwork.collection === 'laminas') {
+      if (selectedSize === 'A3 (29.7 x 42 cm)') return currentPrices.a3;
+      if (selectedSize === 'Canvas batidor (20 x 30 cm)') return currentPrices.canva20x30;
+      if (selectedSize === 'Canvas batidor (40 x 60 cm)') return currentPrices.canva40x60;
+      return currentPrices.a4;
+    }
+    return activeArtwork.price || '';
+  };
 
   const openLightbox = (art: Artwork) => {
     setActiveArtwork(art);
@@ -59,7 +94,8 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
 
       onInquire(activeArtwork, {
         size: activeArtwork.collection === 'originales' ? activeArtwork.size : selectedSize,
-        frame: frameLabel
+        frame: frameLabel,
+        price: getActiveSelectedPrice()
       });
       closeLightbox();
     }
@@ -146,9 +182,6 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
                 <h3 className="text-lg font-light text-[#1A1A1A] tracking-wide transition-colors" style={{ fontFamily: 'Georgia, serif' }}>
                   {art.title}
                 </h3>
-                <p className="text-xs text-[#71716F] mt-1 font-sans">
-                  Dimensión: {art.size}
-                </p>
               </div>
               <span className="text-[10px] uppercase tracking-widest font-mono text-[#1A1A1A] border border-[#1A1A1A] px-2.5 py-1 rounded-none font-bold bg-transparent">
                 Disponible
@@ -245,10 +278,6 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
                         <span className="text-[#1A1A1A] font-medium leading-normal">{activeArtwork.medium}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] tracking-widest text-[#A1A19F] block uppercase">Dimensiones</span>
-                        <span className="text-[#1A1A1A] font-medium">{activeArtwork.size}</span>
-                      </div>
-                      <div>
                         <span className="text-[9px] tracking-widest text-[#A1A19F] block uppercase">Año de Creación</span>
                         <span className="text-[#1A1A1A] font-medium">{activeArtwork.year}</span>
                       </div>
@@ -275,9 +304,18 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
                         >
                           {activeArtwork.collection === 'laminas' ? (
                             <>
-                              <option value="A4 (21 x 29.7 cm)">Lámina A4 (21 x 29.7 cm)</option>
-                              <option value="A3 (29.7 x 42 cm)">Lámina A3 (29.7 x 42 cm)</option>
-                              <option value="Impresión Canva">Impresión Canva</option>
+                              <option value="A4 (21 x 29.7 cm)">
+                                Lámina A4 (21 x 29.7 cm) — ${currentPrices.a4} ARS
+                              </option>
+                              <option value="A3 (29.7 x 42 cm)">
+                                Lámina A3 (29.7 x 42 cm) — ${currentPrices.a3} ARS
+                              </option>
+                              <option value="Canvas batidor (20 x 30 cm)">
+                                Canvas batidor (20 x 30 cm) — ${currentPrices.canva20x30} ARS
+                              </option>
+                              <option value="Canvas batidor (40 x 60 cm)">
+                                Canvas batidor (40 x 60 cm) — ${currentPrices.canva40x60} ARS
+                              </option>
                             </>
                           ) : (
                             <>
@@ -289,6 +327,58 @@ export default function Gallery({ onInquire, artworksList }: GalleryProps) {
                             </>
                           )}
                         </select>
+
+                        {/* Price badge in Argentine pesos (ARS) for laminate options */}
+                        {activeArtwork.collection === 'laminas' && (
+                          <div className="mt-3">
+                            <div className="p-3 bg-[#F4F4F1] border border-[#E5E5E1] flex items-center justify-between">
+                              <div>
+                                <span className="text-[9px] uppercase font-mono tracking-widest text-[#71716F] block">
+                                  Precio (Pesos Argentinos)
+                                </span>
+                                <span className="text-xs text-[#1A1A1A] font-medium font-sans">
+                                  {selectedSize === 'A3 (29.7 x 42 cm)'
+                                    ? 'Lámina A3 (29.7 x 42 cm)'
+                                    : selectedSize === 'Canvas batidor (20 x 30 cm)'
+                                    ? 'Canvas batidor (20 x 30 cm)'
+                                    : selectedSize === 'Canvas batidor (40 x 60 cm)'
+                                    ? 'Canvas batidor (40 x 60 cm)'
+                                    : 'Lámina A4 (21 x 29.7 cm)'}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-lg sm:text-xl font-serif font-medium text-[#1A1A1A]">
+                                  ${getActiveSelectedPrice()}
+                                </span>
+                                <span className="text-[10px] font-mono tracking-wider font-semibold text-[#71716F] ml-1">
+                                  ARS
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Price tag for original artwork or calendar if set */}
+                    {activeArtwork.collection === 'originales' && activeArtwork.price && (
+                      <div className="mb-6 p-3 bg-[#F4F4F1] border border-[#E5E5E1] flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] uppercase font-mono tracking-widest text-[#71716F] block">
+                            Valor de la Obra Original
+                          </span>
+                          <span className="text-xs text-[#1A1A1A] font-medium font-sans">
+                            Medida original ({activeArtwork.size})
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg sm:text-xl font-serif font-medium text-[#1A1A1A]">
+                            ${activeArtwork.price}
+                          </span>
+                          <span className="text-[10px] font-mono tracking-wider font-semibold text-[#71716F] ml-1">
+                            ARS
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
