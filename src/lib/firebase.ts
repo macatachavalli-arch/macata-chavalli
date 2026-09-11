@@ -95,6 +95,36 @@ export function unmarkDesignAsLocallyDeleted(id: string): void {
   }
 }
 
+// Legacy mock items from initial prototype to prevent stale cache resurrection
+export const LEGACY_MOCK_ARTWORK_IDS = new Set([
+  'vibrant-canvas',
+  'botanical-dream',
+  'starry-landscape',
+  'oceanic-harmony',
+  'almanac-2027'
+]);
+
+export const LEGACY_MOCK_DESIGN_IDS = new Set([
+  'design-3'
+]);
+
+function isLegacyMockArtwork(art: Artwork): boolean {
+  if (!art || !art.id) return false;
+  if (LEGACY_MOCK_ARTWORK_IDS.has(art.id)) return true;
+  if (typeof art.imageUrl === 'string' && art.imageUrl.includes('images.unsplash.com/photo-1579783900882')) return true;
+  if (art.title === 'Sinfonía en Girasol y Coral' || art.title === 'El Susurro de las Hojas y Estrellas') return true;
+  return false;
+}
+
+function isLegacyMockDesign(des: DesignProject): boolean {
+  if (!des || !des.id) return false;
+  if (LEGACY_MOCK_DESIGN_IDS.has(des.id)) return true;
+  if (des.title === 'Papelería & Universo Gráfico' || des.title === 'Identidad Visual' || des.title === 'Diseño Editorial') {
+    if (typeof des.imageUrl === 'string' && des.imageUrl.includes('unsplash.com')) return true;
+  }
+  return false;
+}
+
 // Smart bi-directional merge: protects user's recent local modifications from being wiped out by stale cloud snapshots
 export function mergeArtworksWithLocal(cloudArtworks: Artwork[]): Artwork[] {
   const deletedIds = getLocallyDeletedArtworkIds();
@@ -103,15 +133,17 @@ export function mergeArtworksWithLocal(cloudArtworks: Artwork[]): Artwork[] {
     const cached = localStorage.getItem(LOCAL_ARTWORKS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) localArtworks = parsed;
+      if (Array.isArray(parsed)) {
+        localArtworks = parsed.filter(a => !isLegacyMockArtwork(a));
+      }
     }
   } catch {
     localArtworks = [];
   }
 
-  // 1. Filter out any artwork that was locally deleted
-  const activeCloud = cloudArtworks.filter(a => !deletedIds.has(a.id));
-  const activeLocal = localArtworks.filter(a => !deletedIds.has(a.id));
+  // 1. Filter out any artwork that was locally deleted or is a legacy mock
+  const activeCloud = cloudArtworks.filter(a => !deletedIds.has(a.id) && !isLegacyMockArtwork(a));
+  const activeLocal = localArtworks.filter(a => !deletedIds.has(a.id) && !isLegacyMockArtwork(a));
 
   const map = new Map<string, Artwork>();
 
@@ -153,7 +185,9 @@ export function mergeDesignsWithLocal(cloudDesigns: DesignProject[]): DesignProj
     const cached = localStorage.getItem(LOCAL_DESIGNS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed)) localDesigns = parsed;
+      if (Array.isArray(parsed)) {
+        localDesigns = parsed.filter(d => !isLegacyMockDesign(d));
+      }
     }
   } catch {
     localDesigns = [];
@@ -161,11 +195,13 @@ export function mergeDesignsWithLocal(cloudDesigns: DesignProject[]): DesignProj
 
   const map = new Map<string, DesignProject>();
   for (const item of cloudDesigns) {
-    if (!deletedIds.has(item.id)) map.set(item.id, item);
+    if (!deletedIds.has(item.id) && !isLegacyMockDesign(item)) {
+      map.set(item.id, item);
+    }
   }
 
   for (const localItem of localDesigns) {
-    if (deletedIds.has(localItem.id)) continue;
+    if (deletedIds.has(localItem.id) || isLegacyMockDesign(localItem)) continue;
     const existing = map.get(localItem.id);
     if (!existing) {
       map.set(localItem.id, localItem);

@@ -398,11 +398,16 @@ export default function AdminPanel({
       return;
     }
 
+    if (!artImgUrl1.trim()) {
+      setErrorMsg('Por favor sube o proporciona la imagen principal de la obra.');
+      return;
+    }
+
     setIsSaving(true);
     setErrorMsg('');
 
     try {
-      const defaultImg = artImgUrl1.trim() || 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80';
+      const defaultImg = artImgUrl1.trim();
       const finalImageUrls = [
         defaultImg,
         ...(artImgUrl2.trim() ? [artImgUrl2.trim()] : []),

@@ -22,7 +22,9 @@ import {
   saveArtworkToCloud, 
   saveDesignProjectToCloud,
   saveCarouselItemToCloud,
-  resetCloudToDefaults 
+  resetCloudToDefaults,
+  LEGACY_MOCK_ARTWORK_IDS,
+  LEGACY_MOCK_DESIGN_IDS 
 } from './lib/firebase';
 
 export default function App() {
@@ -31,12 +33,25 @@ export default function App() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached) as Artwork[];
-        return parsed.map((art) => {
-          if (art.description === 'Obra contemporánea texturada con una fina composición libre.') {
-            return { ...art, description: '' };
+        if (Array.isArray(parsed)) {
+          // If cache contains legacy mock artworks from early draft, purge it immediately
+          const hasLegacyMock = parsed.some(
+            (art) =>
+              LEGACY_MOCK_ARTWORK_IDS.has(art.id) ||
+              (typeof art.imageUrl === 'string' && art.imageUrl.includes('unsplash.com/photo-1579783900882')) ||
+              art.title === 'Sinfonía en Girasol y Coral'
+          );
+          if (hasLegacyMock) {
+            localStorage.removeItem('macata_artworks');
+            return defaultArtworks;
           }
-          return art;
-        });
+          const valid = parsed.filter(
+            (art) =>
+              !LEGACY_MOCK_ARTWORK_IDS.has(art.id) &&
+              !(typeof art.imageUrl === 'string' && art.imageUrl.includes('unsplash.com/photo-1579783900882'))
+          );
+          if (valid.length > 0) return valid;
+        }
       } catch (e) {
         return defaultArtworks;
       }
@@ -48,9 +63,22 @@ export default function App() {
     const cached = localStorage.getItem('macata_designs');
     if (cached) {
       try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        const parsed = JSON.parse(cached) as DesignProject[];
+        if (Array.isArray(parsed)) {
+          // If cache contains legacy mock design projects, purge it immediately
+          const hasLegacyMock = parsed.some(
+            (des) =>
+              LEGACY_MOCK_DESIGN_IDS.has(des.id) ||
+              (typeof des.imageUrl === 'string' && des.imageUrl.includes('unsplash.com')) ||
+              des.title === 'Papelería & Universo Gráfico' ||
+              (des.title === 'Identidad Visual' && des.id === 'design-1' && typeof des.imageUrl === 'string' && des.imageUrl.includes('unsplash.com'))
+          );
+          if (hasLegacyMock) {
+            localStorage.removeItem('macata_designs');
+            return defaultDesignProjects;
+          }
+          const valid = parsed.filter((des) => !LEGACY_MOCK_DESIGN_IDS.has(des.id));
+          if (valid.length > 0) return valid;
         }
       } catch (e) {
         // Fallback to default
@@ -65,8 +93,18 @@ export default function App() {
     const cached = localStorage.getItem('macata_carousel');
     if (cached) {
       try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const parsed = JSON.parse(cached) as DesignCarouselItem[];
+        if (Array.isArray(parsed)) {
+          // If cache contains unsplash demo items, purge it immediately
+          const hasLegacyMock = parsed.some(
+            (item) => typeof item.imageUrl === 'string' && item.imageUrl.includes('unsplash.com')
+          );
+          if (hasLegacyMock) {
+            localStorage.removeItem('macata_carousel');
+            return defaultDesignCarouselItems;
+          }
+          if (parsed.length > 0) return parsed;
+        }
       } catch (e) {
         // fall back
       }
@@ -135,9 +173,6 @@ export default function App() {
       frame: config.frame
     });
   };
-
-  // Get the featured artwork image (Vibrant Canvas) for the hero mockup
-  const heroArtwork = artworksList[0] || defaultArtworks[0];
 
   if (isAdminOpen) {
     return (
