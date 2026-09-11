@@ -192,7 +192,7 @@ export default function Gallery({ onInquire, artworksList, setArtworksList }: Ga
 
         {filteredArtworks.length === 0 && (
           <div className="col-span-full py-16 text-center text-[#71716F]">
-            <p className="font-serif italic text-base text-stone-500 mb-3">No hay obras en esta categoría actualmente.</p>
+            <p className="font-serif italic text-base text-stone-500 mb-3">¡En breve novedades!</p>
             <button
               onClick={() => setSelectedCategory(collections[0]?.id || 'laminas')}
               className="text-xs font-mono uppercase tracking-widest text-[#1A1A1A] underline underline-offset-4 hover:text-stone-600"
